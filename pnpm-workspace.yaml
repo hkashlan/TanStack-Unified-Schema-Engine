@@ -1,0 +1,5 @@
+packages:
+  - "packages/tanstack-use-core"
+  - "packages/tanstack-use-permissions"
+  - "packages/tanstack-use-files"
+  - "packages/tanstack-use-ui"
