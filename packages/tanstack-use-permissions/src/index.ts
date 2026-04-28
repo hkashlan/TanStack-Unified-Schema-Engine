@@ -1,2 +1,2 @@
-// tanstack-use-permissions entry point
-export {};
+export { AuthorizationError } from "./authorization-error.js";
+export { can } from "./permission-guard.js";

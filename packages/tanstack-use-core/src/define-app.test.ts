@@ -1,8 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
-import { defineModel } from "./define-model.js";
+import { describe, expect, it } from "vitest";
 import { defineApp } from "./define-app.js";
-import type { UIConfig } from "./types.js";
+import { defineModel } from "./define-model.js";
 
 const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),

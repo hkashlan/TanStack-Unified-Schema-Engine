@@ -65,33 +65,33 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Test that the `auth` property is stored as-is on the returned App
     - _Requirements: 4.2, 4.3, 10.1_
 
-- [ ] 5. Create `packages/tanstack-use-core/src/index.ts` barrel export
+- [x] 5. Create `packages/tanstack-use-core/src/index.ts` barrel export
   - Re-export `defineModel`, `defineApp`, and all types from `types.ts`
   - _Requirements: 1.1, 4.1_
 
-- [ ] 6. Checkpoint — core package baseline
+- [x] 6. Checkpoint — core package baseline
   - Ensure all tests in `tanstack-use-core` pass, ask the user if questions arise.
 
-- [ ] 7. Implement `can()` in `tanstack-use-permissions`
-  - [ ] 7.1 Create `packages/tanstack-use-permissions/src/permission-guard.ts`
+- [x] 7. Implement `can()` in `tanstack-use-permissions`
+  - [x] 7.1 Create `packages/tanstack-use-permissions/src/permission-guard.ts`
     - Implement `can(session, target, app): Promise<boolean>`
     - Parse `target` as `"ModelName.operation"`; throw `Error("Unknown model: <name>")` if not found
     - Return `true` when `allowedGroups` is empty or absent
     - Call `app.auth.api.getActiveMemberGroups(session)` and check intersection
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
-  - [ ] 7.2 Create `packages/tanstack-use-permissions/src/authorization-error.ts`
+  - [x] 7.2 Create `packages/tanstack-use-permissions/src/authorization-error.ts`
     - Export `class AuthorizationError extends Error` with HTTP status 403
     - _Requirements: 5.5_
 
-  - [ ]* 7.3 Write unit tests for `can()`
+  - [x] 7.3 Write unit tests for `can()`
     - Test returns `false` for a member with no matching group
     - Test returns `true` for a member with a matching group
     - Test returns `true` when the permission array is empty
     - Test throws `Error("Unknown model: ...")` for an unregistered model name
     - _Requirements: 5.2, 5.3, 10.3_
 
-  - [ ]* 7.4 Write property test for permission evaluation (Property 4)
+  - [x] 7.4 Write property test for permission evaluation (Property 4)
     - **Property 4: Permission evaluation is correct for all group combinations**
     - Generate random allowed-group lists and member-group lists; assert `can()` result equals `allowedGroups.length === 0 || memberGroups.some(g => allowedGroups.includes(g))`
     - **Validates: Requirements 5.2, 5.3**

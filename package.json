@@ -6,9 +6,13 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint ./packages",
+    "format": "biome format --write ./packages",
+    "check": "biome check --write ./packages"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
     "@types/node": "^22.0.0",
     "fast-check": "^3.22.0",
     "tsd": "^0.31.0",

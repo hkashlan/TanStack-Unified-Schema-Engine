@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
+import { describe, expect, it } from "vitest";
 import { defineModel } from "./define-model.js";
 import type { UIConfig } from "./types.js";
 

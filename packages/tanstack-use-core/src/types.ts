@@ -1,17 +1,27 @@
-import type { PgTable } from "drizzle-orm/pg-core";
 import type { Session } from "better-auth";
+import type { PgTable } from "drizzle-orm/pg-core";
 
 /** Alias for the Better Auth session type */
 export type BetterAuthSession = Session;
+
+/**
+ * Minimal structural interface for the Better Auth instance.
+ * The framework only calls `auth.api.getActiveMemberGroups(session)` at
+ * runtime — the full BetterAuth generic type is not needed here.
+ */
+export interface BetterAuthInstance {
+  api: {
+    getActiveMemberGroups: (session: unknown) => Promise<string[]>;
+  };
+}
 
 /** Infer the record type from a Drizzle PgTable */
 export type InferRecord<T extends PgTable> = T["$inferSelect"];
 
 /** All field keys: column keys + computed field keys */
-export type AllFieldKeys<
-  T extends PgTable,
-  TComputed extends Record<string, ComputedFieldDef<T>>,
-> = keyof T["_"]["columns"] | keyof TComputed;
+export type AllFieldKeys<T extends PgTable, TComputed extends Record<string, ComputedFieldDef<T>>> =
+  | keyof T["_"]["columns"]
+  | keyof TComputed;
 
 /** A computed field — compute and format both receive the full typed record */
 export interface ComputedFieldDef<T extends PgTable> {
@@ -27,10 +37,7 @@ export interface UIFieldDef<T extends PgTable> {
   hidden?: boolean | ((record: InferRecord<T>) => boolean);
 }
 
-export interface TabDef<
-  T extends PgTable,
-  TComputed extends Record<string, ComputedFieldDef<T>>,
-> {
+export interface TabDef<T extends PgTable, TComputed extends Record<string, ComputedFieldDef<T>>> {
   label: string;
   rows: AllFieldKeys<T, TComputed>[][];
 }
@@ -58,28 +65,14 @@ export interface PermissionsDef {
 }
 
 export interface ServerHooks<T extends PgTable> {
-  beforeCreate?: (ctx: {
-    record: InferRecord<T>;
-    session: BetterAuthSession;
-  }) => Promise<void>;
-  afterCreate?: (ctx: {
-    record: InferRecord<T>;
-    session: BetterAuthSession;
-  }) => Promise<void>;
-  beforeUpdate?: (ctx: {
-    record: InferRecord<T>;
-    session: BetterAuthSession;
-  }) => Promise<void>;
-  afterUpdate?: (ctx: {
-    record: InferRecord<T>;
-    session: BetterAuthSession;
-  }) => Promise<void>;
+  beforeCreate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
+  afterCreate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
+  beforeUpdate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
+  afterUpdate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
 }
 
 export interface ClientHooks<T extends PgTable> {
-  onSubmit?: (
-    record: InferRecord<T>,
-  ) => InferRecord<T> | Promise<InferRecord<T>>;
+  onSubmit?: (record: InferRecord<T>) => InferRecord<T> | Promise<InferRecord<T>>;
 }
 
 export interface UIConfig<T extends PgTable> {
@@ -100,6 +93,6 @@ export interface Model<T extends PgTable> {
 
 export interface App {
   _tag: "App";
-  models: Map<string, Model<any>>;
-  auth: any; // BetterAuth instance
+  models: Map<string, Model<PgTable>>;
+  auth: BetterAuthInstance;
 }

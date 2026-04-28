@@ -1,8 +1,9 @@
-import type { App, Model } from "./types.js";
+import type { PgTable } from "drizzle-orm/pg-core";
+import type { App, BetterAuthInstance, Model } from "./types.js";
 
 export interface AppConfig {
-  models: Model<any>[];
-  auth: any; // pre-configured Better Auth instance with organization plugin
+  models: Model<PgTable>[];
+  auth: BetterAuthInstance;
 }
 
 /**
@@ -10,10 +11,12 @@ export interface AppConfig {
  * Throws if two models share the same table name.
  */
 export function defineApp(config: AppConfig): App {
-  const models = new Map<string, Model<any>>();
+  const models = new Map<string, Model<PgTable>>();
 
   for (const model of config.models) {
-    const name = model.table[Symbol.for("drizzle:Name") as symbol] as string;
+    const name = (model.table as unknown as Record<symbol, unknown>)[
+      Symbol.for("drizzle:Name")
+    ] as string;
     if (models.has(name)) {
       throw new Error(`Duplicate model: ${name}`);
     }

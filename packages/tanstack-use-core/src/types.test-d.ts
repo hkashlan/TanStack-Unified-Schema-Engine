@@ -4,19 +4,9 @@
  * Requirements: 2.3, 2.5, 3.4, 10.1
  */
 
-import {
-  expectType,
-  expectError,
-  expectAssignable,
-  expectNotAssignable,
-} from "tsd";
-import type {
-  InferRecord,
-  AllFieldKeys,
-  ComputedFieldDef,
-  LayoutDef,
-} from "./types.js";
-import { pgTable, serial, text, integer } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { expectAssignable, expectError, expectNotAssignable, expectType } from "tsd";
+import type { AllFieldKeys, ComputedFieldDef, InferRecord, LayoutDef } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Sample tables used across all tests

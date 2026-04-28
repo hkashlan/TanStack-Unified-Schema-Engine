@@ -1,21 +1,23 @@
 // tanstack-use-core entry point
-export { defineModel } from "./define-model.js";
-export { defineApp } from "./define-app.js";
+
 export type { AppConfig } from "./define-app.js";
+export { defineApp } from "./define-app.js";
+export { defineModel } from "./define-model.js";
 
 export type {
-  BetterAuthSession,
-  InferRecord,
   AllFieldKeys,
+  App,
+  BetterAuthInstance,
+  BetterAuthSession,
+  ClientHooks,
   ComputedFieldDef,
-  UIFieldDef,
-  TabDef,
+  InferRecord,
   LayoutDef,
-  TranslationConfig,
+  Model,
   PermissionsDef,
   ServerHooks,
-  ClientHooks,
+  TabDef,
+  TranslationConfig,
   UIConfig,
-  Model,
-  App,
+  UIFieldDef,
 } from "./types.js";

@@ -1,6 +1,7 @@
 // Feature: tanstack-use, Property 1: Layout field references are a subset of valid keys
-import { describe, it } from "vitest";
+
 import * as fc from "fast-check";
+import { describe, it } from "vitest";
 
 /**
  * Property 1: Layout field references are a subset of valid keys.
@@ -221,25 +222,20 @@ describe("Property 2: Computed field dependsOn references are valid column keys"
           const columnKeySet = new Set(columnKeys);
 
           // Build multiple computed fields, each with valid dependsOn arrays
-          const computedFields = Array.from(
-            { length: numComputedFields },
-            (_, i) => {
-              const dependsOn = fc.sample(
-                fc.array(fc.constantFrom(...columnKeys), {
-                  minLength: 1,
-                  maxLength: columnKeys.length,
-                }),
-                1,
-              )[0] ?? [columnKeys[0]!];
+          const computedFields = Array.from({ length: numComputedFields }, (_, i) => {
+            const dependsOn = fc.sample(
+              fc.array(fc.constantFrom(...columnKeys), {
+                minLength: 1,
+                maxLength: columnKeys.length,
+              }),
+              1,
+            )[0] ?? [columnKeys[0]!];
 
-              return { key: `computed_${i}`, dependsOn };
-            },
-          );
+            return { key: `computed_${i}`, dependsOn };
+          });
 
           // Every dependsOn entry across all computed fields must be a column key
-          return computedFields.every((cf) =>
-            cf.dependsOn.every((dep) => columnKeySet.has(dep)),
-          );
+          return computedFields.every((cf) => cf.dependsOn.every((dep) => columnKeySet.has(dep)));
         },
       ),
       { numRuns: 200 },
