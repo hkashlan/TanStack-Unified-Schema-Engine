@@ -49,7 +49,7 @@ packages/
   tanstack-use-permissions/ # Permission guard, can() function
 ```
 
-Application developers import from `tanstack-use-core` (for `defineModel`/`defineApp`/`fileModel`) and `tanstack-use-ui` (for the router/page factory).
+Application developers import from `@tanstack-use/core` (for `defineModel`/`defineApp`/`fileModel`) and `@tanstack-use/ui` (for the router/page factory).
 
 ---
 
@@ -58,7 +58,7 @@ Application developers import from `tanstack-use-core` (for `defineModel`/`defin
 ### 1. defineModel() API
 
 ```typescript
-// tanstack-use-core/src/define-model.ts
+// @tanstack-use/core/src/define-model.ts
 
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { BetterAuthSession } from "better-auth";
@@ -158,7 +158,7 @@ export function defineModel<T extends PgTable>(
 ### 2. defineApp() API
 
 ```typescript
-// tanstack-use-core/src/define-app.ts
+// @tanstack-use/core/src/define-app.ts
 
 import type { BetterAuth } from "better-auth";
 
@@ -185,7 +185,7 @@ Better Auth integration: The framework calls no auth APIs at definition time. Al
 ### 3. fileModel() Helper
 
 ```typescript
-// tanstack-use-files/src/file-model.ts
+// @tanstack-use/files/src/file-model.ts
 
 import type { PgColumn } from "drizzle-orm/pg-core";
 
@@ -220,8 +220,8 @@ Usage pattern:
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
-import { defineModel, defineApp } from "tanstack-use-core";
-import { fileModel, localDisk } from "tanstack-use-files";
+import { defineModel, defineApp } from "@tanstack-use/core";
+import { fileModel, localDisk } from "@tanstack-use/files";
 
 const auth = betterAuth({
   emailAndPassword: { enabled: true },
@@ -293,7 +293,7 @@ const employeeTable = pgTable("employee", {
 ### Permission Guard
 
 ```typescript
-// tanstack-use-permissions/src/permission-guard.ts
+// @tanstack-use/permissions/src/permission-guard.ts
 
 import type { BetterAuth, Session } from "better-auth";
 
@@ -335,7 +335,7 @@ async function can(session, target, app):
 The renderer generates React route components using TanStack Router's code-based route API. Routes are registered programmatically from the model registry at app startup.
 
 ```typescript
-// tanstack-use-ui/src/renderer.ts
+// @tanstack-use/ui/src/renderer.ts
 
 export function createRoutes(app: App): RouteObject[];
 ```
@@ -454,7 +454,7 @@ Execution order: `beforeCreate` → persist → `afterCreate`. An error in `befo
 ### File Upload Handler
 
 ```typescript
-// tanstack-use-files/src/file-handler.ts
+// @tanstack-use/files/src/file-handler.ts
 
 export async function handleUpload(
   req: { session: Session; fileModelColumn: FileModelColumn; file: File },

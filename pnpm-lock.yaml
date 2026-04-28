@@ -40,7 +40,7 @@ importers:
 
   packages/tanstack-use-permissions:
     dependencies:
-      tanstack-use-core:
+      '@tanstack-use/core':
         specifier: workspace:*
         version: link:../tanstack-use-core
 

@@ -1,5 +1,5 @@
 {
-  "name": "tanstack-use-ui",
+  "name": "@tanstack-use/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -2,7 +2,7 @@
 
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import * as fc from "fast-check";
-import { defineApp, defineModel } from "tanstack-use-core";
+import { defineApp, defineModel } from "@tanstack-use/core";
 import { describe, expect, it } from "vitest";
 import { can } from "./permission-guard.js";
 

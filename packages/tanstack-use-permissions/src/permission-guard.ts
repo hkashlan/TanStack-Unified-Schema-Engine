@@ -1,4 +1,4 @@
-import type { App } from "tanstack-use-core";
+import type { App } from "@tanstack-use/core";
 
 /**
  * Evaluates whether the session's member can perform an operation on a model.

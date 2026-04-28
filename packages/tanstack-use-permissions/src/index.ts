@@ -1,2 +1,2 @@
-export { AuthorizationError } from "./authorization-error.js";
-export { can } from "./permission-guard.js";
+export { can } from "./permission-guard";
+export { AuthorizationError } from "./authorization-error";

@@ -97,7 +97,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - **Validates: Requirements 5.2, 5.3**
     - _Requirements: 10.10_
 
-- [ ] 8. Create `packages/tanstack-use-permissions/src/index.ts` barrel export
+- [x] 8. Create `packages/tanstack-use-permissions/src/index.ts` barrel export
   - Re-export `can` and `AuthorizationError`
   - _Requirements: 5.2_
 

@@ -1,5 +1,5 @@
 {
-  "name": "tanstack-use-permissions",
+  "name": "@tanstack-use/permissions",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "tanstack-use-core": "workspace:*"
+    "@tanstack-use/core": "workspace:*"
   }
 }
