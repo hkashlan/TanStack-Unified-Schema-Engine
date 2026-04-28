@@ -51,15 +51,15 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - **Validates: Requirements 2.4, 2.5**
     - _Requirements: 10.1_
 
-- [ ] 4. Implement `defineApp()` in `tanstack-use-core`
-  - [ ] 4.1 Create `packages/tanstack-use-core/src/define-app.ts`
+- [x] 4. Implement `defineApp()` in `tanstack-use-core`
+  - [x] 4.1 Create `packages/tanstack-use-core/src/define-app.ts`
     - Implement `defineApp(config: AppConfig): App`
     - Build a `Map<string, Model<any>>` keyed by `table[Symbol.for("drizzle:Name")]`
     - Throw `Error("Duplicate model: <name>")` on duplicate table names
     - Return `{ _tag: "App", models, auth }`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ]* 4.2 Write unit tests for `defineApp()`
+  - [x] 4.2 Write unit tests for `defineApp()`
     - Test that models are registered in the map keyed by table name
     - Test that duplicate table names throw the expected error
     - Test that the `auth` property is stored as-is on the returned App
