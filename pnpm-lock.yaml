@@ -36,7 +36,14 @@ importers:
 
   packages/tanstack-use-core: {}
 
-  packages/tanstack-use-files: {}
+  packages/tanstack-use-files:
+    dependencies:
+      '@tanstack-use/core':
+        specifier: workspace:*
+        version: link:../tanstack-use-core
+      '@tanstack-use/permissions':
+        specifier: workspace:*
+        version: link:../tanstack-use-permissions
 
   packages/tanstack-use-permissions:
     dependencies:

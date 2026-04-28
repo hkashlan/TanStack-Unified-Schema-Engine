@@ -101,29 +101,29 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
   - Re-export `can` and `AuthorizationError`
   - _Requirements: 5.2_
 
-- [ ] 9. Checkpoint — permissions package
+- [x] 9. Checkpoint — permissions package
   - Ensure all tests in `tanstack-use-permissions` pass, ask the user if questions arise.
 
-- [ ] 10. Implement storage adapters in `tanstack-use-files`
-  - [ ] 10.1 Create `packages/tanstack-use-files/src/storage-adapter.ts`
+- [x] 10. Implement storage adapters in `tanstack-use-files`
+  - [x] 10.1 Create `packages/tanstack-use-files/src/storage-adapter.ts`
     - Define and export `StorageAdapter` interface with `store(file: File): Promise<string>` and `delete(path: string): Promise<void>`
     - Implement `localDisk(options?: { dir?: string }): StorageAdapter` — writes to local filesystem, returns relative path
     - Implement `s3(options: { bucket: string; region: string }): StorageAdapter` — uploads to S3, returns S3 key
     - _Requirements: 6.1, 6.5_
 
-  - [ ]* 10.2 Write unit tests for storage adapters
+  - [x] 10.2 Write unit tests for storage adapters
     - Test `localDisk` stores a file and returns a non-empty path string
     - Test `localDisk` deletes a previously stored file
     - Test `s3` adapter interface contract (mock AWS SDK)
     - _Requirements: 6.5, 10.4_
 
-- [ ] 11. Implement `fileModel()` and file handlers in `tanstack-use-files`
-  - [ ] 11.1 Create `packages/tanstack-use-files/src/file-model.ts`
+- [x] 11. Implement `fileModel()` and file handlers in `tanstack-use-files`
+  - [x] 11.1 Create `packages/tanstack-use-files/src/file-model.ts`
     - Implement `fileModel(config: FileModelConfig): FileModelColumn`
     - Return `{ column: text("file_path"), _config: config }` — a Drizzle text column
     - _Requirements: 6.1, 6.2_
 
-  - [ ] 11.2 Create `packages/tanstack-use-files/src/file-handler.ts`
+  - [x] 11.2 Create `packages/tanstack-use-files/src/file-handler.ts`
     - Implement `handleUpload(req, app): Promise<string>`
     - Check `fileAccess` groups via `app.auth.api.getActiveMemberGroups`; throw `AuthorizationError` if not permitted
     - Call `storage.store(file)` and return the path
@@ -132,7 +132,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Call `storage.delete(path)`
     - _Requirements: 6.3, 6.4, 6.5_
 
-  - [ ]* 11.3 Write unit tests for `fileModel()` and file handlers
+  - [x] 11.3 Write unit tests for `fileModel()` and file handlers
     - Test `fileModel()` returns an object with a `column` and `_config`
     - Test `handleUpload` rejects when member groups don't intersect `fileAccess`
     - Test `handleUpload` accepts and returns a path when groups intersect
@@ -140,7 +140,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Test `handleDelete` accepts when groups intersect
     - _Requirements: 6.3, 6.4, 10.4_
 
-  - [ ]* 11.4 Write property test for file upload access (Property 5)
+  - [x] 11.4 Write property test for file upload access (Property 5)
     - **Property 5: File upload access is consistent with fileAccess config**
     - Generate random `fileAccess` arrays and member group arrays; assert upload is permitted iff `fileAccess` is empty OR groups intersect
     - **Validates: Requirements 6.3, 6.4**
