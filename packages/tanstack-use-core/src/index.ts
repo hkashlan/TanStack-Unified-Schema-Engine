@@ -3,6 +3,8 @@
 export type { AppConfig } from "./define-app.js";
 export { defineApp } from "./define-app.js";
 export { defineModel } from "./define-model.js";
+export { executeCreate, executeUpdate } from "./execute-hooks.js";
+export type { DrizzleDb } from "./execute-hooks.js";
 
 export type {
   AllFieldKeys,

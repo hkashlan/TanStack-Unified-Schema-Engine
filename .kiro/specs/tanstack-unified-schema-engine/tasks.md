@@ -146,15 +146,15 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - **Validates: Requirements 6.3, 6.4**
     - _Requirements: 10.4_
 
-- [ ] 12. Create `packages/tanstack-use-files/src/index.ts` barrel export
+- [x] 12. Create `packages/tanstack-use-files/src/index.ts` barrel export
   - Re-export `fileModel`, `localDisk`, `s3`, `handleUpload`, `handleDelete`, `StorageAdapter`, `FileModelConfig`, `FileModelColumn`
   - _Requirements: 6.1_
 
-- [ ] 13. Checkpoint — files package
+- [x] 13. Checkpoint — files package
   - Ensure all tests in `tanstack-use-files` pass, ask the user if questions arise.
 
-- [ ] 14. Implement server lifecycle hook execution in `tanstack-use-core`
-  - [ ] 14.1 Create `packages/tanstack-use-core/src/execute-hooks.ts`
+- [x] 14. Implement server lifecycle hook execution in `tanstack-use-core`
+  - [x] 14.1 Create `packages/tanstack-use-core/src/execute-hooks.ts`
     - Implement `executeCreate(model, record, session, db): Promise<InferRecord<T>>`
     - Call `beforeCreate` if defined; propagate any thrown error without writing to DB
     - Insert record via `db.insert(model.table).values(record).returning()`
@@ -162,7 +162,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Implement `executeUpdate` with the same pattern using `beforeUpdate`/`afterUpdate`
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-  - [ ]* 14.2 Write unit tests for server lifecycle hooks
+  - [x] 14.2 Write unit tests for server lifecycle hooks
     - Test `beforeCreate` throwing aborts the operation and no DB insert occurs
     - Test `afterCreate` throwing logs the error and does not roll back the persisted record
     - Test hooks receive `{ record, session }` with the correct types
