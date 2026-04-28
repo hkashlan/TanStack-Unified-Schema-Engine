@@ -20,7 +20,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Use non-empty tuple `[keyof T["_"]["columns"], ...(keyof T["_"]["columns"])[]]` for `ComputedFieldDef.dependsOn`
     - _Requirements: 1.1, 1.4, 2.4, 3.1, 3.4, 8.1_
 
-  - [ ] 2.2 Write compile-time type tests for core types using `tsd`
+  - [x] 2.2 Write compile-time type tests for core types using `tsd`
     - Verify `InferRecord` resolves correctly from a sample `PgTable`
     - Verify `AllFieldKeys` includes both column keys and computed field keys
     - Verify empty `dependsOn` array produces a type error

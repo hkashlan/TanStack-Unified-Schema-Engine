@@ -4,7 +4,20 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:types": "tsd"
+  },
+  "tsd": {
+    "directory": "src",
+    "compilerOptions": {
+      "moduleResolution": "bundler",
+      "module": "ESNext",
+      "target": "ES2022",
+      "strict": true
+    }
   }
 }
