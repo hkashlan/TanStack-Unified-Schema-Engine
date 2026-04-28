@@ -1,0 +1,105 @@
+import type { PgTable } from "drizzle-orm/pg-core";
+import type { Session } from "better-auth";
+
+/** Alias for the Better Auth session type */
+export type BetterAuthSession = Session;
+
+/** Infer the record type from a Drizzle PgTable */
+export type InferRecord<T extends PgTable> = T["$inferSelect"];
+
+/** All field keys: column keys + computed field keys */
+export type AllFieldKeys<
+  T extends PgTable,
+  TComputed extends Record<string, ComputedFieldDef<T>>,
+> = keyof T["_"]["columns"] | keyof TComputed;
+
+/** A computed field — compute and format both receive the full typed record */
+export interface ComputedFieldDef<T extends PgTable> {
+  dependsOn: [keyof T["_"]["columns"], ...(keyof T["_"]["columns"])[]]; // non-empty tuple
+  compute: (record: InferRecord<T>) => unknown;
+  format?: (record: InferRecord<T>) => string;
+}
+
+/** Per-field UI override — format receives the full typed record for context */
+export interface UIFieldDef<T extends PgTable> {
+  label?: string;
+  format?: (record: InferRecord<T>) => string;
+  hidden?: boolean | ((record: InferRecord<T>) => boolean);
+}
+
+export interface TabDef<
+  T extends PgTable,
+  TComputed extends Record<string, ComputedFieldDef<T>>,
+> {
+  label: string;
+  rows: AllFieldKeys<T, TComputed>[][];
+}
+
+export interface LayoutDef<
+  T extends PgTable,
+  TComputed extends Record<string, ComputedFieldDef<T>>,
+> {
+  list?: AllFieldKeys<T, TComputed>[]; // absent → no list page
+  detail?: TabDef<T, TComputed>[]; // absent → no detail page
+  create?: AllFieldKeys<T, TComputed>[]; // absent → no create page
+}
+
+export interface TranslationConfig {
+  fieldLabels?: Record<string, string>;
+  pageTitle?: { list?: string; detail?: string; create?: string };
+  messages?: Record<string, string>;
+}
+
+export interface PermissionsDef {
+  read?: string[]; // Better Auth group names
+  create?: string[];
+  update?: string[];
+  delete?: string[];
+}
+
+export interface ServerHooks<T extends PgTable> {
+  beforeCreate?: (ctx: {
+    record: InferRecord<T>;
+    session: BetterAuthSession;
+  }) => Promise<void>;
+  afterCreate?: (ctx: {
+    record: InferRecord<T>;
+    session: BetterAuthSession;
+  }) => Promise<void>;
+  beforeUpdate?: (ctx: {
+    record: InferRecord<T>;
+    session: BetterAuthSession;
+  }) => Promise<void>;
+  afterUpdate?: (ctx: {
+    record: InferRecord<T>;
+    session: BetterAuthSession;
+  }) => Promise<void>;
+}
+
+export interface ClientHooks<T extends PgTable> {
+  onSubmit?: (
+    record: InferRecord<T>,
+  ) => InferRecord<T> | Promise<InferRecord<T>>;
+}
+
+export interface UIConfig<T extends PgTable> {
+  fields?: Partial<Record<keyof T["_"]["columns"], UIFieldDef<T>>>;
+  computedFields?: Record<string, ComputedFieldDef<T>>;
+  layout?: LayoutDef<T, Record<string, ComputedFieldDef<T>>>;
+  translations?: TranslationConfig;
+  permissions?: PermissionsDef;
+  server?: ServerHooks<T>;
+  client?: ClientHooks<T>;
+}
+
+export interface Model<T extends PgTable> {
+  _tag: "Model";
+  table: T;
+  ui: UIConfig<T>;
+}
+
+export interface App {
+  _tag: "App";
+  models: Map<string, Model<any>>;
+  auth: any; // BetterAuth instance
+}

@@ -14,5 +14,9 @@
     "tsd": "^0.31.0",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.9",
+    "drizzle-orm": "^0.45.2"
   }
 }
