@@ -1,4 +1,6 @@
 // tanstack-use-core entry point
+export { defineModel } from "./define-model.js";
+
 export type {
   BetterAuthSession,
   InferRecord,

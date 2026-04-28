@@ -27,25 +27,25 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Verify layout referencing a non-existent key produces a type error
     - _Requirements: 2.3, 2.5, 3.4, 10.1_
 
-- [ ] 3. Implement `defineModel()` in `tanstack-use-core`
-  - [ ] 3.1 Create `packages/tanstack-use-core/src/define-model.ts`
+- [x] 3. Implement `defineModel()` in `tanstack-use-core`
+  - [x] 3.1 Create `packages/tanstack-use-core/src/define-model.ts`
     - Implement `defineModel<T extends PgTable>(table: T, ui: UIConfig<T>): Model<T>`
     - Return `{ _tag: "Model", table, ui }`
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ]* 3.2 Write unit tests for `defineModel()`
+  - [x] 3.2 Write unit tests for `defineModel()`
     - Test that a valid table + UIConfig returns a Model with `_tag: "Model"`
     - Test that `model.table` and `model.ui` are the exact objects passed in
     - Test that a model with no `ui.layout` is valid (no pages implied at this layer)
     - _Requirements: 1.2, 1.5, 10.1_
 
-  - [ ]* 3.3 Write property test for layout field references (Property 1)
+  - [x] 3.3 Write property test for layout field references (Property 1)
     - **Property 1: Layout field references are a subset of valid keys**
     - Generate arbitrary column maps and UIConfig layouts; assert every referenced field name is either a column key or a computed field key
     - **Validates: Requirements 2.1, 2.2, 2.3**
     - _Requirements: 10.1_
 
-  - [ ]* 3.4 Write property test for computed field dependsOn (Property 2)
+  - [x] 3.4 Write property test for computed field dependsOn (Property 2)
     - **Property 2: Computed field dependsOn references are valid column keys**
     - Generate arbitrary column maps and computed field definitions; assert every `dependsOn` entry is a column key
     - **Validates: Requirements 2.4, 2.5**
