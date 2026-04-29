@@ -20,6 +20,14 @@ import { defineModel } from "../../../tanstack-use-core/src/define-model.js";
 import { ListPage } from "./ListPage.js";
 
 // ---------------------------------------------------------------------------
+// Mock useServerFunctions
+// ---------------------------------------------------------------------------
+
+vi.mock("../server-functions-context.js", () => ({
+  useServerFunctions: () => mockServerFns,
+}));
+
+// ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
@@ -30,11 +38,24 @@ const employeeTable = pgTable("employee", {
 });
 
 // ---------------------------------------------------------------------------
+// Mock server functions — defined at module scope so vi.mock closure can
+// reference them, and reset in afterEach.
+// ---------------------------------------------------------------------------
+
+const mockServerFns = {
+  list: vi.fn(),
+  get: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
+};
+
+// ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Wraps a component in QueryClientProvider and stubs fetch.
+ * Wraps a component in QueryClientProvider and sets up the list mock.
  * Passes `searchParams={{}}` and a no-op `onNavigate` to avoid needing a
  * real TanStack Router context.
  */
@@ -42,11 +63,7 @@ function renderWithQuery(
   ui: React.ReactElement,
   records: Record<string, unknown>[] = [],
 ) {
-  const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => records,
-  });
-  vi.stubGlobal("fetch", fetchMock);
+  mockServerFns.list.mockResolvedValue(records);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -56,7 +73,7 @@ function renderWithQuery(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 
-  return { ...result, fetchMock };
+  return { ...result, listMock: mockServerFns.list };
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +82,7 @@ function renderWithQuery(
 
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 // ---------------------------------------------------------------------------
@@ -261,13 +278,13 @@ describe("ListPage — search input", () => {
       layout: { list: ["id", "name"], listOptions: { searchDebounceMs: 300 } },
     });
 
-    const { fetchMock } = renderWithQuery(
+    const { listMock } = renderWithQuery(
       <ListPage model={model} searchParams={{}} onNavigate={() => undefined} />,
       [],
     );
 
     // Wait for the initial query to fire
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
 
     const searchInput = screen.getByTestId("list-search");
     const user = userEvent.setup({
@@ -280,16 +297,18 @@ describe("ListPage — search input", () => {
     await user.type(searchInput, "c");
 
     // Still only the initial query should have fired (debounce hasn't settled)
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(listMock).toHaveBeenCalledTimes(1);
 
     // Advance past the debounce window
     vi.advanceTimersByTime(400);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
 
-    // The second call should include the search term
-    const secondCallUrl = fetchMock.mock.calls[1]?.[0] as string;
-    expect(secondCallUrl).toContain("search=abc");
+    // The second call should include the search term in the data object
+    const secondCallArg = listMock.mock.calls[1]?.[0] as {
+      data: { search?: string };
+    };
+    expect(secondCallArg.data.search).toBe("abc");
 
     vi.useRealTimers();
   });
@@ -301,12 +320,12 @@ describe("ListPage — search input", () => {
       layout: { list: ["id", "name"], listOptions: { searchDebounceMs: 200 } },
     });
 
-    const { fetchMock } = renderWithQuery(
+    const { listMock } = renderWithQuery(
       <ListPage model={model} searchParams={{}} onNavigate={() => undefined} />,
       [],
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
 
     const searchInput = screen.getByTestId("list-search");
     const user = userEvent.setup({
@@ -316,7 +335,7 @@ describe("ListPage — search input", () => {
     await user.type(searchInput, "hello");
     vi.advanceTimersByTime(300);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
 
     vi.useRealTimers();
   });

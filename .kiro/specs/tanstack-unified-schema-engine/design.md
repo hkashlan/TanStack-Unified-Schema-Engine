@@ -19,6 +19,7 @@ The core design principle is **minimal code**: use Drizzle as-is, use Better Aut
 - **TanStack Table for list pages**: Column definitions are derived from `ui.layout.list`. Sorting and filter state live in the URL via TanStack Router search params.
 - **TanStack Form for create/edit pages**: Field validators are declared in `ui.fields.validate`. The form tracks dirty state and blocks navigation away from unsaved changes.
 - **TanStack Pacer for search debounce**: The search input in list pages uses `useAsyncDebouncer` with a configurable delay (default 300 ms) to avoid firing a query on every keystroke.
+- **TanStack Start server functions for all data operations**: A single `createServerFunctions(app, db)` call in `tanstack-use-ui` produces typed server functions for `list`, `get`, `create`, `update`, and `remove`. No REST endpoints, no manual `fetch` calls, no `apiBase` prop. Components access these via `useServerFunctions()` from a React context provider. Developers place breakpoints directly inside their `beforeCreate`/`afterCreate` hooks — the debugger stops there during server function execution.
 - **TanStack AI for the chatbot**: `buildAITools(app, session)` derives tool definitions from `app.models` at runtime. The developer passes a TanStack AI adapter — no LLM provider is hard-coded. The chatbot is provider-agnostic by design.
 - **AI tools respect permissions**: `buildAITools` calls `can()` for each operation before registering the tool. A session without `create` permission never gets a `createEmployee` tool — the AI cannot attempt what the user cannot do.
 
@@ -54,14 +55,15 @@ flowchart TD
 
 ```
 packages/
-  tanstack-use-core/        # defineModel, defineApp, type utilities
+  tanstack-use-core/        # defineModel, defineApp, type utilities, executeCreate/executeUpdate
   tanstack-use-ui/          # TanStack Renderer (Router + Query + Table + Form + Pacer)
+                            # + createServerFunctions, ServerFunctionsProvider, useServerFunctions
   tanstack-use-files/       # fileModel helper, storage adapters
   tanstack-use-permissions/ # Permission guard, can() function
   tanstack-use-ai/          # buildAITools, buildSystemPrompt, ChatBot component
 ```
 
-Application developers import from `@tanstack-use/core` (for `defineModel`/`defineApp`/`fileModel`), `@tanstack-use/ui` (for the router/page factory), and `@tanstack-use/ai` (for the chatbot).
+Application developers import from `@tanstack-use/core` (for `defineModel`/`defineApp`), `@tanstack-use/ui` (for the router/page factory, server functions, and context provider), and `@tanstack-use/ai` (for the chatbot).
 
 ---
 
@@ -276,14 +278,19 @@ Routes are registered via `createRoutes(app, rootRoute)` returning real TanStack
 
 ```
 <ListPage>:
+  const { list } = useServerFunctions()
+
   // Search debounce via TanStack Pacer
   [searchTerm, setSearchTerm] = useState("")
   debouncedSearch = useAsyncDebouncer(searchTerm, {
     wait: model.ui.layout.listOptions?.searchDebounceMs ?? 300
   })
 
-  // Data fetching via TanStack Query
-  data = useQuery(fetchAll(tableName, { search: debouncedSearch }))
+  // Data fetching via TanStack Query → server function
+  data = useQuery({
+    queryKey: [tableName, "list", debouncedSearch, sorting, pagination],
+    queryFn: () => list({ tableName, search: debouncedSearch, ...sorting, ...pagination })
+  })
 
   // Column definitions derived from ui.layout.list
   columns = model.ui.layout.list.map(col => ({
@@ -309,6 +316,7 @@ Routes are registered via `createRoutes(app, rootRoute)` returning real TanStack
 
 ```
 <CreatePage>:
+  const { create } = useServerFunctions()
   fields = model.ui.layout.create.filter(f => f not in computedFields)
 
   form = useForm({
@@ -317,7 +325,7 @@ Routes are registered via `createRoutes(app, rootRoute)` returning real TanStack
       let record = value
       if model.ui.client?.onSubmit:
         record = await model.ui.client.onSubmit(record)
-      POST /api/{tableName} with record
+      await create({ tableName, record })
     }
   })
 
@@ -339,6 +347,104 @@ beforeLoad: ({ context }) => {
   }
 }
 ```
+
+---
+
+### 4. Server Functions Layer
+
+```typescript
+// packages/tanstack-use-ui/src/server-functions.ts
+"use server";
+
+import { createServerFn } from "@tanstack/start";
+import { can, AuthorizationError } from "@tanstack-use/permissions";
+import { executeCreate, executeUpdate, type DrizzleDb } from "@tanstack-use/core";
+import type { App } from "@tanstack-use/core";
+
+export function createServerFunctions(app: App, db: DrizzleDb) {
+  const list = createServerFn()
+    .validator((d: { tableName: string; search?: string; sortBy?: string; sortDir?: string; page?: number; pageSize?: number }) => d)
+    .handler(async ({ data, context }) => {
+      const model = app.models.get(data.tableName);
+      if (!model) throw new Error(`Unknown model: ${data.tableName}`);
+      const session = await app.auth.api.getSession({ headers: context.request.headers });
+      if (!await can(session, `${data.tableName}.read`, app)) throw new AuthorizationError();
+      // Apply search/sort/pagination to Drizzle query and return records
+    });
+
+  const get = createServerFn()
+    .validator((d: { tableName: string; id: string | number }) => d)
+    .handler(async ({ data, context }) => {
+      const model = app.models.get(data.tableName);
+      if (!model) throw new Error(`Unknown model: ${data.tableName}`);
+      const session = await app.auth.api.getSession({ headers: context.request.headers });
+      if (!await can(session, `${data.tableName}.read`, app)) throw new AuthorizationError();
+      // Return single record by id or throw not-found
+    });
+
+  const create = createServerFn()
+    .validator((d: { tableName: string; record: unknown }) => d)
+    .handler(async ({ data, context }) => {
+      const model = app.models.get(data.tableName);
+      if (!model) throw new Error(`Unknown model: ${data.tableName}`);
+      const session = await app.auth.api.getSession({ headers: context.request.headers });
+      if (!await can(session, `${data.tableName}.create`, app)) throw new AuthorizationError();
+      // Delegates to executeCreate — beforeCreate hook → persist → afterCreate hook
+      return executeCreate(model, data.record, session, db);
+    });
+
+  const update = createServerFn()
+    .validator((d: { tableName: string; id: string | number; record: unknown }) => d)
+    .handler(async ({ data, context }) => {
+      const model = app.models.get(data.tableName);
+      if (!model) throw new Error(`Unknown model: ${data.tableName}`);
+      const session = await app.auth.api.getSession({ headers: context.request.headers });
+      if (!await can(session, `${data.tableName}.update`, app)) throw new AuthorizationError();
+      return executeUpdate(model, data.record, session, db);
+    });
+
+  const remove = createServerFn()
+    .validator((d: { tableName: string; id: string | number }) => d)
+    .handler(async ({ data, context }) => {
+      const model = app.models.get(data.tableName);
+      if (!model) throw new Error(`Unknown model: ${data.tableName}`);
+      const session = await app.auth.api.getSession({ headers: context.request.headers });
+      if (!await can(session, `${data.tableName}.delete`, app)) throw new AuthorizationError();
+      // Delete record via Drizzle
+    });
+
+  return { list, get, create, update, remove };
+}
+```
+
+**Context provider and hook** (`server-functions-context.tsx`):
+
+```typescript
+const ServerFunctionsContext = createContext<ReturnType<typeof createServerFunctions> | null>(null);
+
+export function ServerFunctionsProvider({ fns, children }) {
+  return <ServerFunctionsContext.Provider value={fns}>{children}</ServerFunctionsContext.Provider>;
+}
+
+export function useServerFunctions() {
+  const ctx = useContext(ServerFunctionsContext);
+  if (!ctx) throw new Error("useServerFunctions must be used inside <ServerFunctionsProvider>");
+  return ctx;
+}
+```
+
+**Developer one-time setup**:
+
+```typescript
+// app.tsx or root.tsx
+const fns = createServerFunctions(app, db);
+
+<ServerFunctionsProvider fns={fns}>
+  <RouterProvider router={router} />
+</ServerFunctionsProvider>
+```
+
+**Debugging**: Because `beforeCreate`, `afterCreate`, `beforeUpdate`, and `afterUpdate` are plain async functions defined in the developer's own codebase, placing a breakpoint inside them works exactly as expected — the debugger stops there during server function execution with full access to the record and session in scope.
 
 ---
 
@@ -371,7 +477,7 @@ export function buildSystemPrompt(app: App): string;
 **Tool generation algorithm**:
 
 ```
-async function buildAITools(app, session):
+async function buildAITools(app, session, serverFns):
   tools = {}
   for each [tableName, model] of app.models:
     for each operation of ["list", "create", "update", "delete"]:
@@ -380,7 +486,7 @@ async function buildAITools(app, session):
         tools[`${operation}${capitalize(tableName)}`] = toolDefinition({
           description: `${operation} ${tableName} records`,
           parameters: buildParameterSchema(model, operation),
-          execute: buildExecutor(tableName, operation),
+          execute: buildExecutor(serverFns, tableName, operation),
         })
   return tools
 ```
@@ -492,10 +598,11 @@ For any sequence of keystrokes within the debounce window, the search query fire
 | `defineApp()` receives duplicate model table names | Runtime `Error("Duplicate model: <name>")` |
 | `can()` called with unknown model name | Runtime `Error("Unknown model: <name>")` |
 | `can()` returns `false` on page access | TanStack Router redirect to `/unauthorized` |
-| `can()` returns `false` on create/update/delete | `AuthorizationError` thrown (HTTP 403) |
+| `can()` returns `false` on create/update/delete | `AuthorizationError` thrown (HTTP 403) by server function |
 | File upload by unauthorized member | `AuthorizationError` thrown (HTTP 403) |
-| `beforeCreate` throws | Create operation aborted, error propagated to caller |
+| `beforeCreate` throws | Create server function aborts, error propagated to caller |
 | `afterCreate` throws | Error logged, record NOT rolled back |
+| `useServerFunctions()` called outside provider | Runtime error: `"useServerFunctions must be used inside <ServerFunctionsProvider>"` |
 | `ui.layout` absent entirely | No pages generated for that model (by design) |
 | `label` absent on a field | Falls back to field key name as label |
 | Form field fails validation | Error message displayed below field; submit disabled |

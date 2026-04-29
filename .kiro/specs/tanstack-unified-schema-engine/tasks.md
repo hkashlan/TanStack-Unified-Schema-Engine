@@ -239,25 +239,25 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - **Validates: Requirements 11.3, 11.4**
     - _Requirements: 10.11_
 
-- [ ] 18. Implement `DetailPage` component in `tanstack-use-ui`
-  - [ ] 18.1 Create `packages/tanstack-use-ui/src/components/DetailPage.tsx`
+- [x] 18. Implement `DetailPage` component in `tanstack-use-ui`
+  - [x] 18.1 Create `packages/tanstack-use-ui/src/components/DetailPage.tsx`
     - Use TanStack Query `useQuery` to fetch one record from `GET /api/{tableName}/$id`
     - Render tabs from `model.ui.layout.detail`; each tab renders its rows; each row renders fields horizontally via `<FieldDisplay>`
     - Implement `<FieldDisplay>` that resolves label and calls `format(record)` or `compute(record)` as appropriate
     - _Requirements: 7.2, 7.4, 7.5, 7.6_
 
-  - [ ]* 18.2 Write unit tests for `DetailPage`
+  - [x] 18.2 Write unit tests for `DetailPage`
     - Test tabbed interface renders one tab per `layout.detail` entry
     - Test rows render fields side by side
     - Test `<FieldDisplay>` calls `format` with the full record
     - _Requirements: 7.5, 7.6, 10.7_
 
-- [ ] 19. Implement `CreatePage` component with TanStack Form
-  - [ ] 19.1 Install `@tanstack/react-form` in `tanstack-use-ui`
+- [x] 19. Implement `CreatePage` component with TanStack Form
+  - [x] 19.1 Install `@tanstack/react-form` in `tanstack-use-ui`
     - Add `@tanstack/react-form` as a dependency of `packages/tanstack-use-ui`
     - _Requirements: 12.1_
 
-  - [ ] 19.2 Create `packages/tanstack-use-ui/src/components/CreatePage.tsx`
+  - [x] 19.2 Create `packages/tanstack-use-ui/src/components/CreatePage.tsx`
     - Filter `model.ui.layout.create` to exclude computed field keys
     - Use TanStack Form `useForm` with field validators from `ui.fields[fieldName]?.validate`
     - Validators run on change and on blur per field
@@ -267,7 +267,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Add a dirty-state navigation guard via TanStack Router's `onBeforeLoad` that prompts the user before leaving an unsaved form
     - _Requirements: 7.3, 7.7, 3.2, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
 
-  - [ ]* 19.3 Write unit tests for `CreatePage`
+  - [x] 19.3 Write unit tests for `CreatePage`
     - Test computed fields are excluded from the form field list
     - Test `onSubmit` hook is called with the full record before submission
     - Test the value submitted to the API is the return value of `onSubmit`, not the original record
@@ -275,11 +275,52 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Test that the submit button is disabled when a field has a validation error
     - _Requirements: 3.2, 7.7, 10.2, 10.7, 12.3, 12.4_
 
-  - [ ]* 19.4 Write property test for onSubmit transformation (Property 7)
+  - [x] 19.4 Write property test for onSubmit transformation (Property 7)
     - **Property 7: onSubmit transformation is applied before submission**
     - Generate random records and transform functions; assert the value POSTed equals `onSubmit(record)`
     - **Validates: Requirements 7.7**
     - _Requirements: 10.7_
+
+- [x] 30. Implement TanStack Start server functions in `tanstack-use-ui`
+  - [x] 30.1 Install `@tanstack/start` in `tanstack-use-ui`
+    - Add `@tanstack/start` as a dependency of `packages/tanstack-use-ui`
+    - _Requirements: 14.1_
+
+  - [x] 30.2 Create `packages/tanstack-use-ui/src/server-functions.ts`
+    - Add `"use server"` directive at the top of the file
+    - Implement `createServerFunctions(app: App, db: DrizzleDb)` returning `{ list, get, create, update, remove }`
+    - `list`: accepts `{ tableName, search?, sortBy?, sortDir?, page?, pageSize? }`, checks `read` permission via `can()`, queries Drizzle with filters applied, returns records array
+    - `get`: accepts `{ tableName, id }`, checks `read` permission, returns single record or throws not-found error
+    - `create`: accepts `{ tableName, record }`, checks `create` permission, delegates to `executeCreate(model, record, session, db)`
+    - `update`: accepts `{ tableName, id, record }`, checks `update` permission, delegates to `executeUpdate(model, record, session, db)`
+    - `remove`: accepts `{ tableName, id }`, checks `delete` permission, deletes record via Drizzle
+    - Each function resolves the session via `app.auth.api.getSession({ headers: context.request.headers })`
+    - Each function throws `AuthorizationError` when `can()` returns `false`
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.9, 14.10, 14.11_
+
+  - [x] 30.3 Create `packages/tanstack-use-ui/src/server-functions-context.tsx`
+    - Export `ServerFunctionsContext` (React context, internal)
+    - Export `ServerFunctionsProvider` component accepting `fns` prop (return type of `createServerFunctions`) and `children`
+    - Export `useServerFunctions()` hook that reads from context and throws `"useServerFunctions must be used inside <ServerFunctionsProvider>"` when context is null
+    - _Requirements: 14.6, 14.7, 14.8_
+
+  - [x] 30.4 Write unit tests for `createServerFunctions` and `useServerFunctions`
+    - Test `list` throws `AuthorizationError` when `can()` returns `false` for `read`
+    - Test `create` calls `executeCreate` with the correct model, record, and session
+    - Test `create` throws `AuthorizationError` when `can()` returns `false` for `create`
+    - Test `update` calls `executeUpdate` with the correct model, record, and session
+    - Test `remove` throws `AuthorizationError` when `can()` returns `false` for `delete`
+    - Test `useServerFunctions()` throws when called outside `<ServerFunctionsProvider>`
+    - Test `useServerFunctions()` returns the `fns` object when inside `<ServerFunctionsProvider>`
+    - _Requirements: 14.3, 14.4, 14.5, 14.8_
+
+  - [x] 30.5 Update `ListPage`, `DetailPage`, and `CreatePage` to use `useServerFunctions()`
+    - Remove all `fetch("/api/...")` calls and `apiBase` props
+    - `ListPage`: call `useServerFunctions().list({ tableName, search, sortBy, sortDir, page, pageSize })` inside `useQuery`
+    - `DetailPage`: call `useServerFunctions().get({ tableName, id })` inside `useQuery`
+    - `CreatePage`: call `useServerFunctions().create({ tableName, record })` inside `form.onSubmit`
+    - Update all existing unit tests to mock `useServerFunctions` instead of `fetch`
+    - _Requirements: 7.8, 14.6_
 
 - [ ] 20. Implement file field rendering in `tanstack-use-ui`
   - [ ] 20.1 Add file field detection to `<FieldInput>` and `<FieldDisplay>`
@@ -289,7 +330,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - When the member lacks upload access (checked via `can()`), render the field as read-only without upload/delete controls
     - _Requirements: 6.6, 6.7_
 
-  - [ ]* 20.2 Write unit tests for file field rendering
+  - [ ] 20.2 Write unit tests for file field rendering
     - Test file upload input is rendered for members with access
     - Test read-only display is rendered for members without access
     - _Requirements: 6.6, 6.7_
@@ -300,14 +341,14 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - If `can()` returns `false`, redirect to `/unauthorized` via TanStack Router
     - _Requirements: 5.4_
 
-  - [ ]* 21.2 Write unit tests for permission enforcement in UI
+  - [ ] 21.2 Write unit tests for permission enforcement in UI
     - Test that a page redirects to `/unauthorized` when `can()` returns `false`
     - Test that a page renders normally when `can()` returns `true`
     - _Requirements: 5.4, 10.3_
 
 - [ ] 22. Create `packages/tanstack-use-ui/src/index.ts` barrel export
-  - Re-export `createRoutes`, `buildRouteDescriptors`, `ListPage`, `DetailPage`, `CreatePage`, `FieldDisplay`, `FieldInput`
-  - _Requirements: 7.1, 7.2, 7.3_
+  - Re-export `createRoutes`, `buildRouteDescriptors`, `ListPage`, `DetailPage`, `CreatePage`, `FieldDisplay`, `FieldInput`, `createServerFunctions`, `ServerFunctionsProvider`, `useServerFunctions`
+  - _Requirements: 7.1, 7.2, 7.3, 14.6_
 
 - [ ] 23. Checkpoint — UI package
   - Ensure all tests in `tanstack-use-ui` pass, ask the user if questions arise.
@@ -333,9 +374,9 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
   - [ ] 25.1 Create `packages/tanstack-use-ai/src/build-ai-tools.ts`
     - For each model and each operation (`list`, `create`, `update`, `delete`), call `can(session, target, app)`
     - Register a TanStack AI `toolDefinition` only for permitted operations
-    - Each tool's `execute` function calls the corresponding API endpoint and returns the result
-    - The `list` tool executor calls `GET /api/{tableName}` and returns the records array
-    - The `create` tool executor calls `POST /api/{tableName}` with the provided fields
+    - Each tool's `execute` function calls the corresponding server function from `createServerFunctions` and returns the result
+    - The `list` tool executor calls `serverFns.list({ tableName })` and returns the records array
+    - The `create` tool executor calls `serverFns.create({ tableName, record })` with the provided fields
     - _Requirements: 13.1, 13.2, 13.4, 13.8_
 
   - [ ] 25.2 Write unit tests for `buildAITools`

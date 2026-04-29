@@ -33,6 +33,7 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
+import { useServerFunctions } from "../server-functions-context.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,11 +42,6 @@ import { resolveLabel } from "../label-resolver.js";
 export interface ListPageProps<T extends PgTable> {
   /** The model whose list layout drives this page */
   model: Model<T>;
-  /**
-   * Base URL for the API. Defaults to `/api`.
-   * Records are fetched from `{apiBase}/{tableName}`.
-   */
-  apiBase?: string;
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
@@ -71,29 +67,6 @@ function getTableName(table: PgTable): string {
   return (table as unknown as Record<symbol, unknown>)[
     Symbol.for("drizzle:Name")
   ] as string;
-}
-
-/** Build a fetch URL with optional search, sort, and pagination params. */
-function buildUrl(
-  apiBase: string,
-  tableName: string,
-  search: string,
-  sorting: SortingState,
-  pagination: PaginationState,
-): string {
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  if (sorting.length > 0) {
-    const first = sorting[0];
-    if (first) {
-      params.set("sortBy", first.id);
-      params.set("sortDir", first.desc ? "desc" : "asc");
-    }
-  }
-  params.set("page", String(pagination.pageIndex));
-  params.set("pageSize", String(pagination.pageSize));
-  const qs = params.toString();
-  return `${apiBase}/${tableName}${qs ? `?${qs}` : ""}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,13 +161,18 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
 
 function ListPageCore<T extends PgTable>({
   model,
-  apiBase = "/api",
   searchParams,
   onNavigate,
 }: ListPageCoreProps<T>): React.ReactElement {
   const tableName = getTableName(model.table);
   const listFields = model.ui.layout?.list ?? [];
   const debounceMs = model.ui.layout?.listOptions?.searchDebounceMs ?? 300;
+
+  // -------------------------------------------------------------------------
+  // Server functions via context
+  // -------------------------------------------------------------------------
+
+  const { list } = useServerFunctions();
 
   // -------------------------------------------------------------------------
   // Search state — raw input value + debounced value sent to the query
@@ -270,16 +248,8 @@ function ListPageCore<T extends PgTable>({
   }
 
   // -------------------------------------------------------------------------
-  // Data fetching via TanStack Query
+  // Data fetching via TanStack Query → server function
   // -------------------------------------------------------------------------
-
-  const fetchUrl = buildUrl(
-    apiBase,
-    tableName,
-    debouncedSearch,
-    sorting,
-    pagination,
-  );
 
   const {
     data = [],
@@ -287,12 +257,17 @@ function ListPageCore<T extends PgTable>({
     isError,
   } = useQuery<Record<string, unknown>[]>({
     queryKey: [tableName, "list", debouncedSearch, sorting, pagination],
-    queryFn: async () => {
-      const res = await fetch(fetchUrl);
-      if (!res.ok)
-        throw new Error(`Failed to fetch ${fetchUrl}: ${res.status}`);
-      return res.json() as Promise<Record<string, unknown>[]>;
-    },
+    queryFn: () =>
+      list({
+        data: {
+          tableName,
+          search: debouncedSearch || undefined,
+          sortBy: sorting[0]?.id,
+          sortDir: sorting[0]?.desc ? "desc" : "asc",
+          page: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }) as Promise<Record<string, unknown>[]>,
   });
 
   // -------------------------------------------------------------------------

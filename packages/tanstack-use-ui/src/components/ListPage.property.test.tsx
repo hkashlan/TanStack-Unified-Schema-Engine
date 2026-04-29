@@ -26,6 +26,14 @@ import { defineModel } from "../../../tanstack-use-core/src/define-model.js";
 import { ListPage } from "./ListPage.js";
 
 // ---------------------------------------------------------------------------
+// Mock useServerFunctions
+// ---------------------------------------------------------------------------
+
+vi.mock("../server-functions-context.js", () => ({
+  useServerFunctions: () => mockServerFns,
+}));
+
+// ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
@@ -36,6 +44,18 @@ const itemTable = pgTable("item", {
 });
 
 // ---------------------------------------------------------------------------
+// Mock server functions
+// ---------------------------------------------------------------------------
+
+const mockServerFns = {
+  list: vi.fn(),
+  get: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
+};
+
+// ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
@@ -43,11 +63,7 @@ function renderWithQuery(
   ui: React.ReactElement,
   records: Record<string, unknown>[] = [],
 ) {
-  const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => records,
-  });
-  vi.stubGlobal("fetch", fetchMock);
+  mockServerFns.list.mockResolvedValue(records);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -57,12 +73,12 @@ function renderWithQuery(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 
-  return { ...result, fetchMock };
+  return { ...result, listMock: mockServerFns.list };
 }
 
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 // ---------------------------------------------------------------------------
@@ -145,6 +161,7 @@ describe("Property 3: format and compute receive the full record", () => {
 
     for (const { alpha, beta } of testCases) {
       cleanup();
+      vi.clearAllMocks();
 
       const formatFn = (record: Record<string, unknown>) =>
         `${String(record["alpha"])}|${String(record["beta"])}`;
@@ -183,6 +200,7 @@ describe("Property 3: format and compute receive the full record", () => {
 
     for (const { alpha, beta } of testCases) {
       cleanup();
+      vi.clearAllMocks();
 
       const computeFn = (record: Record<string, unknown>) =>
         `computed:${String(record["alpha"])}-${String(record["beta"])}`;
@@ -339,6 +357,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
         fc.integer({ min: 100, max: 300 }),
         async (searchText, debounceMs) => {
           cleanup();
+          vi.clearAllMocks();
           vi.useFakeTimers({ shouldAdvanceTime: true });
 
           const model = defineModel(itemTable, {
@@ -348,7 +367,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
             },
           });
 
-          const { fetchMock } = renderWithQuery(
+          const { listMock } = renderWithQuery(
             <ListPage
               model={model}
               searchParams={{}}
@@ -358,7 +377,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
           );
 
           // Wait for the initial query
-          await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+          await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
 
           const searchInput = screen.getByTestId("list-search");
           const user = userEvent.setup({
@@ -373,19 +392,19 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
           }
 
           // Still only the initial query should have fired
-          expect(fetchMock).toHaveBeenCalledTimes(1);
+          expect(listMock).toHaveBeenCalledTimes(1);
 
           // Advance past the debounce window to let it settle
           vi.advanceTimersByTime(debounceMs + 50);
 
           // Exactly one additional query should fire (the settled search)
-          await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+          await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
 
-          // The second call should include the full search term
-          const secondCallUrl = fetchMock.mock.calls[1]?.[0] as string;
-          expect(secondCallUrl).toContain(
-            `search=${encodeURIComponent(searchText)}`,
-          );
+          // The second call should include the full search term in the data object
+          const secondCallArg = listMock.mock.calls[1]?.[0] as {
+            data: { search?: string };
+          };
+          expect(secondCallArg.data.search).toBe(searchText);
 
           vi.useRealTimers();
         },
@@ -409,6 +428,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
           .filter((s) => /^[a-z]+$/.test(s)),
         async (firstBurst, secondBurst) => {
           cleanup();
+          vi.clearAllMocks();
           vi.useFakeTimers({ shouldAdvanceTime: true });
 
           const debounceMs = 200;
@@ -419,7 +439,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
             },
           });
 
-          const { fetchMock } = renderWithQuery(
+          const { listMock } = renderWithQuery(
             <ListPage
               model={model}
               searchParams={{}}
@@ -428,7 +448,7 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
             [],
           );
 
-          await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+          await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
 
           const searchInput = screen.getByTestId("list-search");
           const user = userEvent.setup({
@@ -440,14 +460,14 @@ describe("Property 9: Search debounce fires exactly once per settled input", () 
             await user.type(searchInput, char);
           }
           vi.advanceTimersByTime(debounceMs + 50);
-          await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+          await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
 
           // Second burst
           for (const char of secondBurst) {
             await user.type(searchInput, char);
           }
           vi.advanceTimersByTime(debounceMs + 50);
-          await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+          await waitFor(() => expect(listMock).toHaveBeenCalledTimes(3));
 
           vi.useRealTimers();
         },

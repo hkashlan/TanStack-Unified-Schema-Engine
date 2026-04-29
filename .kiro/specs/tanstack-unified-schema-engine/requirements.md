@@ -4,7 +4,7 @@
 
 `tanstack-use` is a TypeScript framework where developers define one model per file using `defineModel()` and the system generates UI pages (list, detail, create) using TanStack Router + TanStack Query, with group-based permissions via Better Auth and file upload with access control. The framework's core principle is **minimal code** — use Drizzle as-is, use Better Auth as-is, and only add what those libraries cannot provide: the UI config layer and the TanStack renderer.
 
-The framework also integrates TanStack Table for rich list views, TanStack Form for validated create/edit forms, TanStack Pacer for debounced search inputs, and TanStack AI for an auto-generated AI chatbot that understands every registered model, page, and permitted action.
+The framework also integrates TanStack Table for rich list views, TanStack Form for validated create/edit forms, TanStack Pacer for debounced search inputs, TanStack Start server functions for all data operations, and TanStack AI for an auto-generated AI chatbot that understands every registered model, page, and permitted action.
 
 ## Glossary
 
@@ -21,7 +21,8 @@ The framework also integrates TanStack Table for rich list views, TanStack Form 
 - **Group**: A named collection of Members used for permission evaluation, managed entirely by Better Auth's organization plugin.
 - **File_Model**: A file helper created via `fileModel()` that declares storage config and `fileAccess` groups. It produces a text column (storing the file path) for use in a Drizzle table.
 - **Permission_Guard**: The runtime enforcement layer that evaluates `can()` using Better Auth group memberships.
-- **TanStack_Renderer**: The UI module that reads `UIConfig` directly to render list, detail, and create pages using TanStack Router + TanStack Query + TanStack Table + TanStack Form.
+- **TanStack_Renderer**: The UI module that reads `UIConfig` directly to render list, detail, and create pages using TanStack Router + TanStack Query + TanStack Table + TanStack Form, calling data via TanStack Start server functions.
+- **Server_Functions**: The data layer inside `tanstack-use-ui` that exposes `createServerFunctions(app, db)` — a single file producing typed TanStack Start server functions for all CRUD operations. Each function enforces permissions via `can()` and invokes the model's lifecycle hooks via `executeCreate`/`executeUpdate`.
 - **AI_Agent**: The auto-generated chatbot powered by TanStack AI that derives its knowledge of pages, models, and actions from the App registry at startup.
 
 ---
@@ -131,6 +132,7 @@ The framework also integrates TanStack Table for rich list views, TanStack Form 
 5. WHEN a detail layout defines multiple tabs, THE TanStack_Renderer SHALL render a tabbed interface where each tab contains its declared rows.
 6. WHEN a row contains multiple field references, THE TanStack_Renderer SHALL render those fields horizontally side by side.
 7. WHEN a `client.onSubmit` hook is defined on a Model, THE TanStack_Renderer SHALL invoke the hook with the full typed record before submitting the create or update request.
+8. ALL data operations (list, get, create, update, delete) SHALL be performed via TanStack Start server functions — no direct `fetch` calls to REST endpoints shall be made by the generated pages.
 
 ---
 
@@ -210,8 +212,29 @@ The framework also integrates TanStack Table for rich list views, TanStack Form 
 2. WHEN a field declares a `validate` function in `ui.fields`, THE Engine SHALL register it as a TanStack Form field-level validator; validation SHALL run on change and on blur.
 3. WHEN a form field fails validation, THE TanStack_Renderer SHALL display the validation error message below the field.
 4. THE submit button SHALL be disabled while the form is submitting or while any field has a validation error.
-5. WHEN `client.onSubmit` is defined, THE Engine SHALL call it with the validated record values before POSTing to the API.
+5. WHEN `client.onSubmit` is defined, THE Engine SHALL call it with the validated record values before invoking the create server function.
 6. THE form SHALL track dirty state; navigating away from a dirty form SHALL prompt the user for confirmation via TanStack Router's `onBeforeLoad` guard.
+
+---
+
+### Requirement 14: TanStack Start Server Functions
+
+**User Story:** As a developer, I want all data operations to go through TanStack Start server functions so that I get end-to-end type safety, no manual API routes, and a single place to add breakpoints when debugging server-side logic.
+
+#### Acceptance Criteria
+
+1. THE Engine SHALL export a `createServerFunctions(app, db)` function from `tanstack-use-ui` that returns typed TanStack Start server functions for all CRUD operations: `list`, `get`, `create`, `update`, and `remove`.
+2. ALL five server functions SHALL be produced from a single `"use server"` file — no per-model boilerplate is required from the developer.
+3. EACH server function SHALL enforce permissions by calling `can(session, "ModelName.operation", app)` and throwing `AuthorizationError` when the check fails.
+4. THE `create` server function SHALL delegate to `executeCreate(model, record, session, db)` so that `beforeCreate` and `afterCreate` hooks are always invoked.
+5. THE `update` server function SHALL delegate to `executeUpdate(model, record, session, db)` so that `beforeUpdate` and `afterUpdate` hooks are always invoked.
+6. THE Engine SHALL export a `ServerFunctionsProvider` React context provider and a `useServerFunctions()` hook from `tanstack-use-ui`; all generated page components SHALL call `useServerFunctions()` to obtain the server functions rather than accepting them as props.
+7. THE developer SHALL call `createServerFunctions(app, db)` once at the application root, wrap the app with `<ServerFunctionsProvider fns={fns}>`, and all generated pages will automatically use the correct server functions.
+8. WHEN `useServerFunctions()` is called outside a `<ServerFunctionsProvider>`, THE Engine SHALL throw a descriptive error: `"useServerFunctions must be used inside <ServerFunctionsProvider>"`.
+9. THE `list` server function SHALL accept optional `search`, `sortBy`, `sortDir`, `page`, and `pageSize` parameters and apply them to the Drizzle query.
+10. THE `get` server function SHALL accept a `tableName` and `id` and return the matching record, or throw a not-found error if absent.
+11. THE `remove` server function SHALL accept a `tableName` and `id`, enforce delete permission, and delete the record via Drizzle.
+12. BECAUSE server functions are plain async functions, developers MAY place breakpoints inside `beforeCreate`, `afterCreate`, `beforeUpdate`, and `afterUpdate` hooks and the debugger will stop there during server function execution.
 
 ---
 
@@ -224,7 +247,7 @@ The framework also integrates TanStack Table for rich list views, TanStack Form 
 1. THE Engine SHALL export a `buildAITools(app, session)` function from a new `tanstack-use-ai` package that derives AI tool definitions from `app.models` using TanStack AI (`@tanstack/ai`).
 2. FOR EACH model in the App registry, `buildAITools` SHALL generate tools for each operation (`list`, `create`, `update`, `delete`) that the session's member is permitted to perform, as determined by `can()`.
 3. THE Engine SHALL export a `buildSystemPrompt(app)` function that generates a natural-language description of all registered models, their fields, and their permitted operations for use as the AI system prompt.
-4. WHEN the AI agent calls a generated tool, THE Engine SHALL execute the corresponding API operation (e.g. `GET /api/{tableName}`, `POST /api/{tableName}`) and return the result to the agent.
+4. WHEN the AI agent calls a generated tool, THE Engine SHALL invoke the corresponding server function (list, create, update, or delete) and return the result to the agent.
 5. WHEN the AI agent navigates to a page as part of a tool response, THE Engine SHALL call TanStack Router's `navigate()` to perform the navigation programmatically.
 6. THE AI provider adapter SHALL be configurable by the developer — the framework SHALL NOT hard-code a specific LLM provider; developers pass a TanStack AI adapter (e.g. `openaiText("gpt-4o")`) to `defineApp()` or to the chatbot component directly.
 7. THE chatbot component SHALL stream responses using TanStack AI's built-in streaming support.
