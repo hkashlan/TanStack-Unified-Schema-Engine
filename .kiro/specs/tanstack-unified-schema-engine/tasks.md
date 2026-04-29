@@ -335,22 +335,22 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Test read-only display is rendered for members without access
     - _Requirements: 6.6, 6.7_
 
-- [ ] 21. Implement permission enforcement in `tanstack-use-ui`
-  - [ ] 21.1 Add permission guard to route components
+- [x] 21. Implement permission enforcement in `tanstack-use-ui`
+  - [x] 21.1 Add permission guard to route components
     - In each page component, call `can(session, "ModelName.operation", app)` on mount
     - If `can()` returns `false`, redirect to `/unauthorized` via TanStack Router
     - _Requirements: 5.4_
 
-  - [ ] 21.2 Write unit tests for permission enforcement in UI
+  - [x] 21.2 Write unit tests for permission enforcement in UI
     - Test that a page redirects to `/unauthorized` when `can()` returns `false`
     - Test that a page renders normally when `can()` returns `true`
     - _Requirements: 5.4, 10.3_
 
-- [ ] 22. Create `packages/tanstack-use-ui/src/index.ts` barrel export
+- [x] 22. Create `packages/tanstack-use-ui/src/index.ts` barrel export
   - Re-export `createRoutes`, `buildRouteDescriptors`, `ListPage`, `DetailPage`, `CreatePage`, `FieldDisplay`, `FieldInput`, `createServerFunctions`, `ServerFunctionsProvider`, `useServerFunctions`
   - _Requirements: 7.1, 7.2, 7.3, 14.6_
 
-- [ ] 23. Checkpoint — UI package
+- [x] 23. Checkpoint — UI package
   - Ensure all tests in `tanstack-use-ui` pass, ask the user if questions arise.
 
 - [ ] 24. Bootstrap `tanstack-use-ai` package

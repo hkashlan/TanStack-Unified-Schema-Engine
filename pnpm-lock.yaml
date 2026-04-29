@@ -65,6 +65,9 @@ importers:
 
   packages/tanstack-use-ui:
     dependencies:
+      '@tanstack-use/permissions':
+        specifier: workspace:*
+        version: link:../tanstack-use-permissions
       '@tanstack/pacer':
         specifier: ^0.21.0
         version: 0.21.0

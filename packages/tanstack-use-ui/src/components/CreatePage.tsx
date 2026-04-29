@@ -20,6 +20,8 @@
  */
 
 import { useForm } from "@tanstack/react-form";
+import { useNavigate } from "@tanstack/react-router";
+import { can } from "@tanstack-use/permissions";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
@@ -51,15 +53,21 @@ export interface CreatePageProps<T extends PgTable> {
    */
   confirmNavigation?: () => boolean;
   /**
-   * The current user session. Required for file field access checks.
-   * When absent, file fields fall back to read-only display.
+   * The current user session. Required for permission enforcement and file
+   * field access checks. When absent, permission checks are skipped.
    */
   session?: unknown;
   /**
-   * The App registry. Required for file field access checks via `can()`.
-   * When absent, file fields fall back to read-only display.
+   * The App registry. Required for permission enforcement via `can()` and
+   * file field access checks. When absent, permission checks are skipped.
    */
   app?: App;
+  /**
+   * Optional override for the redirect function used when permission is denied.
+   * When provided, this is called instead of TanStack Router's `navigate`.
+   * Useful for testing without a full TanStack Router context.
+   */
+  onUnauthorized?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -288,7 +296,7 @@ interface FieldInputProps<T extends PgTable> {
  *
  * The label is resolved via `resolveLabel` (Requirement 9.2, 9.3).
  */
-function FieldInput<T extends PgTable>({
+export function FieldInput<T extends PgTable>({
   fieldName,
   model,
   form,
@@ -414,6 +422,7 @@ export function CreatePage<T extends PgTable>({
   confirmNavigation,
   session,
   app,
+  onUnauthorized,
 }: CreatePageProps<T>): React.ReactElement {
   const tableName = getTableName(model.table);
 
@@ -422,6 +431,50 @@ export function CreatePage<T extends PgTable>({
   // -------------------------------------------------------------------------
 
   const { create } = useServerFunctions();
+
+  // -------------------------------------------------------------------------
+  // Permission guard (Requirement 5.4)
+  // -------------------------------------------------------------------------
+
+  const [authorized, setAuthorized] = useState<boolean | null>(
+    session === undefined || app === undefined ? true : null,
+  );
+
+  const routerNavigate = useNavigate();
+
+  useEffect(() => {
+    if (session === undefined || app === undefined) return;
+
+    let cancelled = false;
+
+    async function checkPermission() {
+      if (!app || !session) return;
+      try {
+        const permitted = await can(session, `${tableName}.create`, app);
+        if (cancelled) return;
+        if (!permitted) {
+          if (onUnauthorized) {
+            onUnauthorized();
+          } else {
+            void (routerNavigate as (opts: { to: string }) => void)({
+              to: "/unauthorized",
+            });
+          }
+          setAuthorized(false);
+        } else {
+          setAuthorized(true);
+        }
+      } catch {
+        if (!cancelled) setAuthorized(false);
+      }
+    }
+
+    void checkPermission();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableName, session, app, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Determine which fields to render — exclude computed field keys (Req 3.2)
@@ -518,6 +571,20 @@ export function CreatePage<T extends PgTable>({
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
+
+  // Still resolving permission
+  if (authorized === null) {
+    return (
+      <div data-testid="create-page-loading-permission">
+        Checking permissions…
+      </div>
+    );
+  }
+
+  // Unauthorized — redirect is in progress; render nothing
+  if (!authorized) {
+    return <div data-testid="create-page-unauthorized" />;
+  }
 
   return (
     <div data-testid="create-page">

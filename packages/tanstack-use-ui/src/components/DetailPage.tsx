@@ -17,9 +17,12 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { can } from "@tanstack-use/permissions";
 import type { PgTable } from "drizzle-orm/pg-core";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type {
+  App,
   ComputedFieldDef,
   Model,
   TabDef,
@@ -55,6 +58,22 @@ export interface DetailPageProps<T extends PgTable> {
   model: Model<T>;
   /** The record ID to fetch */
   id: string | number;
+  /**
+   * The current user session. Required for permission enforcement.
+   * When absent, permission checks are skipped (open access assumed).
+   */
+  session?: unknown;
+  /**
+   * The App registry. Required for permission enforcement via `can()`.
+   * When absent, permission checks are skipped (open access assumed).
+   */
+  app?: App;
+  /**
+   * Optional override for the redirect function used when permission is denied.
+   * When provided, this is called instead of TanStack Router's `navigate`.
+   * Useful for testing without a full TanStack Router context.
+   */
+  onUnauthorized?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +244,11 @@ export function FieldDisplay<T extends PgTable>({
 /**
  * Renders a tabbed detail page for a single record of the given model.
  *
+ * Permission enforcement (Requirement 5.4):
+ * When `session` and `app` are provided, `can(session, "ModelName.read", app)`
+ * is called on mount. If it returns `false`, the component redirects to
+ * `/unauthorized` via `onUnauthorized` (or TanStack Router's `navigate`).
+ *
  * Tabs are derived from `model.ui.layout.detail`. Each tab contains rows;
  * each row renders its fields horizontally side by side via `<FieldDisplay>`.
  *
@@ -233,6 +257,9 @@ export function FieldDisplay<T extends PgTable>({
 export function DetailPage<T extends PgTable>({
   model,
   id,
+  session,
+  app,
+  onUnauthorized,
 }: DetailPageProps<T>): React.ReactElement {
   const tableName = getTableName(model.table);
   const tabs = (model.ui.layout?.detail ?? []) as TabDef<
@@ -245,6 +272,50 @@ export function DetailPage<T extends PgTable>({
   // -------------------------------------------------------------------------
 
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  // -------------------------------------------------------------------------
+  // Permission guard (Requirement 5.4)
+  // -------------------------------------------------------------------------
+
+  const [authorized, setAuthorized] = useState<boolean | null>(
+    session === undefined || app === undefined ? true : null,
+  );
+
+  const routerNavigate = useNavigate();
+
+  useEffect(() => {
+    if (session === undefined || app === undefined) return;
+
+    let cancelled = false;
+
+    async function checkPermission() {
+      if (!app || !session) return;
+      try {
+        const permitted = await can(session, `${tableName}.read`, app);
+        if (cancelled) return;
+        if (!permitted) {
+          if (onUnauthorized) {
+            onUnauthorized();
+          } else {
+            void (routerNavigate as (opts: { to: string }) => void)({
+              to: "/unauthorized",
+            });
+          }
+          setAuthorized(false);
+        } else {
+          setAuthorized(true);
+        }
+      } catch {
+        if (!cancelled) setAuthorized(false);
+      }
+    }
+
+    void checkPermission();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableName, session, app, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Data fetching via TanStack Query → server function
@@ -265,6 +336,20 @@ export function DetailPage<T extends PgTable>({
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
+
+  // Still resolving permission
+  if (authorized === null) {
+    return (
+      <div data-testid="detail-page">
+        <div data-testid="detail-loading-permission">Checking permissions…</div>
+      </div>
+    );
+  }
+
+  // Unauthorized — redirect is in progress; render nothing
+  if (!authorized) {
+    return <div data-testid="detail-page-unauthorized" />;
+  }
 
   if (isLoading) {
     return (
