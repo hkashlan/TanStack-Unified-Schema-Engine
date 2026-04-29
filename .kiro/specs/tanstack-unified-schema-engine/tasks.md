@@ -370,8 +370,8 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Test that a model with no layout sections is described as having no available pages
     - _Requirements: 13.3_
 
-- [ ] 25. Implement `buildAITools(app, session)` in `tanstack-use-ai`
-  - [ ] 25.1 Create `packages/tanstack-use-ai/src/build-ai-tools.ts`
+- [x] 25. Implement `buildAITools(app, session)` in `tanstack-use-ai`
+  - [x] 25.1 Create `packages/tanstack-use-ai/src/build-ai-tools.ts`
     - For each model and each operation (`list`, `create`, `update`, `delete`), call `can(session, target, app)`
     - Register a TanStack AI `toolDefinition` only for permitted operations
     - Each tool's `execute` function calls the corresponding server function from `createServerFunctions` and returns the result
@@ -379,14 +379,14 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - The `create` tool executor calls `serverFns.create({ tableName, record })` with the provided fields
     - _Requirements: 13.1, 13.2, 13.4, 13.8_
 
-  - [ ] 25.2 Write unit tests for `buildAITools`
+  - [x] 25.2 Write unit tests for `buildAITools`
     - Test that a session with `create` permission gets a `create{ModelName}` tool
     - Test that a session without `create` permission does NOT get a `create{ModelName}` tool
     - Test that an empty-permission model (open access) generates tools for all operations
     - Test that the `list` tool executor calls the correct API endpoint
     - _Requirements: 13.2, 13.8, 10.12_
 
-  - [ ] 25.3 Write property test for AI tool permission boundaries (Property 8)
+  - [x] 25.3 Write property test for AI tool permission boundaries (Property 8)
     - **Property 8: AI tools respect permission boundaries**
     - Generate random permission configs and member group lists; assert `buildAITools` generates a tool for operation X iff `can()` returns `true` for that operation
     - **Validates: Requirements 13.2, 13.8**
