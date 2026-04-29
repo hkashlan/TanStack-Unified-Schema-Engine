@@ -104,6 +104,21 @@ export interface UIConfig<T extends PgTable> {
   permissions?: PermissionsDef;
   server?: ServerHooks<T>;
   client?: ClientHooks<T>;
+  /**
+   * File field declarations. Maps column keys to `FileModelColumn` objects
+   * produced by `fileModel()`. The UI layer uses this to detect file fields
+   * and render upload inputs with access control (Requirements 6.6, 6.7).
+   *
+   * @example
+   * ```ts
+   * const fm = fileModel({ storage: localDisk(), fileAccess: ["admin"] });
+   * const model = defineModel(myTable, {
+   *   fileFields: { avatar: fm },
+   *   layout: { create: ["name", "avatar"] },
+   * });
+   * ```
+   */
+  fileFields?: Partial<Record<keyof T["_"]["columns"], { _config: { storage: unknown; fileAccess?: string[] } }>>;
 }
 
 export interface Model<T extends PgTable> {

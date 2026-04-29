@@ -10,8 +10,10 @@
  *  - Implements handleSubmit: calls `model.ui.client?.onSubmit` if defined, then POSTs to `/api/{tableName}`
  *  - Adds a dirty-state navigation guard via TanStack Router's `onBeforeLoad` that prompts
  *    the user before leaving an unsaved form
+ *  - Detects file fields (via `_config` on the column) and renders a file upload input
+ *    for members with access, or a read-only display for those without (Requirements 6.6, 6.7)
  *
- * Requirements: 7.3, 7.7, 3.2, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6
+ * Requirements: 7.3, 7.7, 3.2, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 6.6, 6.7
  *
  * Memoization note: this file intentionally omits useCallback/useMemo.
  * The React Compiler handles all memoization automatically.
@@ -19,8 +21,9 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { PgTable } from "drizzle-orm/pg-core";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
+  App,
   Model,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
@@ -47,6 +50,16 @@ export interface CreatePageProps<T extends PgTable> {
    * Useful for testing without a real browser confirm dialog.
    */
   confirmNavigation?: () => boolean;
+  /**
+   * The current user session. Required for file field access checks.
+   * When absent, file fields fall back to read-only display.
+   */
+  session?: unknown;
+  /**
+   * The App registry. Required for file field access checks via `can()`.
+   * When absent, file fields fall back to read-only display.
+   */
+  app?: App;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +74,195 @@ function getTableName(table: PgTable): string {
 }
 
 // ---------------------------------------------------------------------------
+// File field detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the `_config` object when the field was declared as a file field
+ * via `model.ui.fileFields[fieldName]`, or `undefined` for regular fields.
+ *
+ * Developers declare file fields in `UIConfig.fileFields` using the
+ * `FileModelColumn` object returned by `fileModel()`.
+ */
+function getFileFieldConfig(
+  fieldName: string,
+  model: Model<PgTable>,
+): { fileAccess?: string[]; storage: unknown } | undefined {
+  const fileFields = (
+    model.ui as {
+      fileFields?: Record<
+        string,
+        { _config: { fileAccess?: string[]; storage: unknown } }
+      >;
+    }
+  ).fileFields;
+  if (!fileFields) return undefined;
+  return fileFields[fieldName]?._config;
+}
+
+// ---------------------------------------------------------------------------
+// FileFieldInput — file upload input with access control
+// ---------------------------------------------------------------------------
+
+interface FileFieldInputProps {
+  fieldName: string;
+  currentPath: string;
+  fileAccess: string[];
+  /** The FileModelColumn object from model.ui.fileFields — used for upload operations */
+  fileModelColumn: { _config: { storage: unknown; fileAccess?: string[] } };
+  session: unknown;
+  app: App | undefined;
+  onUpload: (path: string) => void;
+}
+
+/**
+ * Renders a file upload input for members with upload access, or a read-only
+ * display for those without.
+ *
+ * Access is determined by checking whether the session's member groups
+ * intersect `fileAccess`. When `app` or `session` is absent, falls back to
+ * read-only.
+ *
+ * Requirements 6.6, 6.7
+ */
+export function FileFieldInput({
+  fieldName,
+  currentPath,
+  fileAccess,
+  fileModelColumn,
+  session,
+  app,
+  onUpload,
+}: FileFieldInputProps): React.ReactElement {
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Resolve upload access asynchronously
+  useEffect(() => {
+    if (!app || !session) {
+      // No app/session — treat as no access (read-only)
+      setHasAccess(fileAccess.length === 0);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function checkAccess() {
+      if (!app) return;
+      try {
+        if (fileAccess.length === 0) {
+          if (!cancelled) setHasAccess(true);
+          return;
+        }
+        const memberGroups = await app.auth.api.getActiveMemberGroups(session);
+        const permitted = memberGroups.some((g) => fileAccess.includes(g));
+        if (!cancelled) setHasAccess(permitted);
+      } catch {
+        if (!cancelled) setHasAccess(false);
+      }
+    }
+
+    void checkAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [app, session, fileAccess]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = (e.nativeEvent.target as unknown as HTMLInputElement).files;
+    const file = files?.[0];
+    if (!file || !app) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const { handleUpload } =
+        await import("../../../tanstack-use-files/src/file-handler.js");
+
+      const path = await handleUpload(
+        {
+          session,
+          fileModelColumn: fileModelColumn as unknown as Parameters<
+            typeof handleUpload
+          >[0]["fileModelColumn"],
+          file,
+        },
+        app,
+      );
+      onUpload(path);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // Still resolving access
+  if (hasAccess === null) {
+    return (
+      <div data-testid={`file-field-loading-${fieldName}`}>
+        <span>Loading…</span>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    // Read-only display — no upload or delete controls (Requirement 6.7)
+    return (
+      <div
+        data-testid={`file-field-readonly-${fieldName}`}
+        aria-label={`${fieldName} (read-only)`}
+      >
+        {currentPath ? (
+          <span data-testid={`file-field-path-${fieldName}`}>
+            {currentPath}
+          </span>
+        ) : (
+          <span data-testid={`file-field-empty-${fieldName}`}>No file</span>
+        )}
+      </div>
+    );
+  }
+
+  // Upload input — member has access (Requirement 6.6)
+  return (
+    <div data-testid={`file-field-upload-${fieldName}`}>
+      {currentPath && (
+        <span
+          data-testid={`file-field-current-${fieldName}`}
+          style={{ fontSize: "0.875rem", color: "#666" }}
+        >
+          Current: {currentPath}
+        </span>
+      )}
+      <input
+        type="file"
+        data-testid={`file-field-input-${fieldName}`}
+        disabled={uploading}
+        onChange={handleFileChange}
+        aria-label={`Upload ${fieldName}`}
+      />
+      {uploading && (
+        <span data-testid={`file-field-uploading-${fieldName}`}>
+          Uploading…
+        </span>
+      )}
+      {uploadError && (
+        <span
+          data-testid={`file-field-error-${fieldName}`}
+          role="alert"
+          style={{ color: "red" }}
+        >
+          {uploadError}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // FieldInput — renders a single form field with label, input, and error
 // ---------------------------------------------------------------------------
 
@@ -69,10 +271,17 @@ interface FieldInputProps<T extends PgTable> {
   model: Model<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: ReturnType<typeof useForm<any>>;
+  session?: unknown;
+  app?: App | undefined;
 }
 
 /**
- * Renders a single form field: label, text input, and validation error message.
+ * Renders a single form field: label, text input (or file upload), and
+ * validation error message.
+ *
+ * When the column was produced by `fileModel()`, renders a `<FileFieldInput>`
+ * instead of a plain text input. The `session` and `app` props are forwarded
+ * to `<FileFieldInput>` for access control (Requirements 6.6, 6.7).
  *
  * The validator from `ui.fields[fieldName]?.validate` is registered on both
  * `onChange` and `onBlur` (Requirements 12.2).
@@ -83,6 +292,8 @@ function FieldInput<T extends PgTable>({
   fieldName,
   model,
   form,
+  session,
+  app,
 }: FieldInputProps<T>): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
   const uiFields = (model.ui.fields ?? {}) as Record<
@@ -90,6 +301,12 @@ function FieldInput<T extends PgTable>({
     UIFieldDef<T> | undefined
   >;
   const validate = uiFields[fieldName]?.validate;
+
+  // Detect file fields
+  const fileConfig = getFileFieldConfig(
+    fieldName,
+    model as unknown as Model<PgTable>,
+  );
 
   return (
     <form.Field
@@ -116,19 +333,39 @@ function FieldInput<T extends PgTable>({
           >
             {label}
           </label>
-          <input
-            id={`field-${fieldName}`}
-            data-testid={`field-input-${fieldName}`}
-            value={String(field.state.value ?? "")}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            aria-invalid={field.state.meta.errors.length > 0}
-            aria-describedby={
-              field.state.meta.errors.length > 0
-                ? `field-error-${fieldName}`
-                : undefined
-            }
-          />
+
+          {fileConfig ? (
+            // File field — render upload input or read-only display
+            <FileFieldInput
+              fieldName={fieldName}
+              currentPath={String(field.state.value ?? "")}
+              fileAccess={fileConfig.fileAccess ?? []}
+              fileModelColumn={fileConfig}
+              session={session}
+              app={app}
+              onUpload={(path) => field.handleChange(path)}
+            />
+          ) : (
+            // Regular text input
+            <input
+              id={`field-${fieldName}`}
+              data-testid={`field-input-${fieldName}`}
+              value={String(field.state.value ?? "")}
+              onChange={(e) =>
+                field.handleChange(
+                  (e.nativeEvent.target as unknown as { value: string }).value,
+                )
+              }
+              onBlur={field.handleBlur}
+              aria-invalid={field.state.meta.errors.length > 0}
+              aria-describedby={
+                field.state.meta.errors.length > 0
+                  ? `field-error-${fieldName}`
+                  : undefined
+              }
+            />
+          )}
+
           {field.state.meta.errors.length > 0 && (
             <span
               id={`field-error-${fieldName}`}
@@ -175,6 +412,8 @@ export function CreatePage<T extends PgTable>({
   model,
   onSuccess,
   confirmNavigation,
+  session,
+  app,
 }: CreatePageProps<T>): React.ReactElement {
   const tableName = getTableName(model.table);
 
@@ -296,6 +535,8 @@ export function CreatePage<T extends PgTable>({
             fieldName={fieldName}
             model={model}
             form={form}
+            session={session}
+            app={app}
           />
         ))}
 

@@ -322,15 +322,15 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Update all existing unit tests to mock `useServerFunctions` instead of `fetch`
     - _Requirements: 7.8, 14.6_
 
-- [ ] 20. Implement file field rendering in `tanstack-use-ui`
-  - [ ] 20.1 Add file field detection to `<FieldInput>` and `<FieldDisplay>`
+- [x] 20. Implement file field rendering in `tanstack-use-ui`
+  - [x] 20.1 Add file field detection to `<FieldInput>` and `<FieldDisplay>`
     - Detect file fields by checking if the column is produced by `fileModel()` (via `_config` presence)
     - In `<FieldDisplay>`: render a preview of the stored file path
     - In `<FieldInput>`: render a file upload input; call `handleUpload` on file selection; update the form value with the returned path
     - When the member lacks upload access (checked via `can()`), render the field as read-only without upload/delete controls
     - _Requirements: 6.6, 6.7_
 
-  - [ ] 20.2 Write unit tests for file field rendering
+  - [x] 20.2 Write unit tests for file field rendering
     - Test file upload input is rendered for members with access
     - Test read-only display is rendered for members without access
     - _Requirements: 6.6, 6.7_

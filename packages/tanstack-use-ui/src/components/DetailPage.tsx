@@ -7,8 +7,10 @@
  *  - Each tab renders its rows; each row renders fields horizontally via `<FieldDisplay>`
  *  - `<FieldDisplay>` resolves the label via `resolveLabel` and calls `format(record)`
  *    or `compute(record)` as appropriate
+ *  - `<FieldDisplay>` detects file fields (via `_config` presence) and renders a
+ *    file path preview (Requirement 6.6)
  *
- * Requirements: 7.2, 7.4, 7.5, 7.6
+ * Requirements: 7.2, 7.4, 7.5, 7.6, 6.6
  *
  * Memoization note: this file intentionally omits useCallback/useMemo.
  * The React Compiler handles all memoization automatically.
@@ -25,6 +27,24 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { useServerFunctions } from "../server-functions-context.js";
+
+// ---------------------------------------------------------------------------
+// File field detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the field was declared as a file field via
+ * `model.ui.fileFields[fieldName]`.
+ *
+ * Developers declare file fields in `UIConfig.fileFields` using the
+ * `FileModelColumn` object returned by `fileModel()`. This is the
+ * authoritative source for file field detection in the UI layer.
+ */
+function isFileField(fieldName: string, model: Model<PgTable>): boolean {
+  const fileFields = (model.ui as { fileFields?: Record<string, unknown> })
+    .fileFields;
+  return fileFields !== undefined && fieldName in fileFields;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +69,65 @@ function getTableName(table: PgTable): string {
 }
 
 // ---------------------------------------------------------------------------
+// FileFieldPreview — renders a stored file path as a preview
+// ---------------------------------------------------------------------------
+
+interface FileFieldPreviewProps {
+  fieldName: string;
+  filePath: string;
+}
+
+/**
+ * Renders a preview of a stored file path.
+ *
+ * For image-like extensions a small `<img>` preview is shown; for all other
+ * file types the path is rendered as a plain text link.
+ *
+ * Requirement 6.6
+ */
+export function FileFieldPreview({
+  fieldName,
+  filePath,
+}: FileFieldPreviewProps): React.ReactElement {
+  const isImage = /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(filePath);
+
+  return (
+    <div
+      data-testid={`file-preview-${fieldName}`}
+      style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+    >
+      {isImage ? (
+        <img
+          src={filePath}
+          alt={fieldName}
+          data-testid={`file-preview-img-${fieldName}`}
+          style={{
+            maxWidth: "200px",
+            maxHeight: "200px",
+            objectFit: "contain",
+          }}
+        />
+      ) : (
+        <a
+          href={filePath}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid={`file-preview-link-${fieldName}`}
+        >
+          {filePath}
+        </a>
+      )}
+      <span
+        data-testid={`file-preview-path-${fieldName}`}
+        style={{ fontSize: "0.75rem", color: "#666" }}
+      >
+        {filePath}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // FieldDisplay — renders a single field's label + value
 // ---------------------------------------------------------------------------
 
@@ -62,9 +141,11 @@ interface FieldDisplayProps<T extends PgTable> {
  * Renders a single field as a label + value pair.
  *
  * Resolution order:
- *  1. If the field is a computed field: `cf.format ? cf.format(record) : String(cf.compute(record))`
- *  2. If the field has a `format` function in `ui.fields`: `uiField.format(record)`
- *  3. Otherwise: `record[fieldName]` as a string
+ *  1. If the field is a file field (detected via `_config` on the column):
+ *     render a `<FileFieldPreview>` with the stored path (Requirement 6.6)
+ *  2. If the field is a computed field: `cf.format ? cf.format(record) : String(cf.compute(record))`
+ *  3. If the field has a `format` function in `ui.fields`: `uiField.format(record)`
+ *  4. Otherwise: `record[fieldName]` as a string
  *
  * The label is resolved via `resolveLabel` (calls `label()` if defined, falls
  * back to the field key name — Requirement 9.2, 9.3).
@@ -88,19 +169,37 @@ export function FieldDisplay<T extends PgTable>({
   const cf = computedFields[fieldName];
   const uiField = uiFields[fieldName];
 
-  let value: string;
-  if (cf !== undefined) {
+  // Check if this is a file field — file fields get a dedicated preview
+  const fileField = isFileField(fieldName, model as unknown as Model<PgTable>);
+
+  let valueNode: React.ReactNode;
+
+  if (fileField) {
+    // File field — render a preview of the stored path (Requirement 6.6)
+    const raw = record[fieldName];
+    const filePath = raw !== undefined && raw !== null ? String(raw) : "";
+    valueNode = filePath ? (
+      <FileFieldPreview fieldName={fieldName} filePath={filePath} />
+    ) : (
+      <span data-testid={`field-value-${fieldName}`}>—</span>
+    );
+  } else if (cf !== undefined) {
     // Computed field — use format if available, otherwise stringify compute result
-    value = cf.format
+    const value = cf.format
       ? cf.format(record as Parameters<typeof cf.format>[0])
       : String(cf.compute(record as Parameters<typeof cf.compute>[0]));
+    valueNode = <span data-testid={`field-value-${fieldName}`}>{value}</span>;
   } else if (uiField?.format) {
     // Regular field with a format function — pass the full record
-    value = uiField.format(record as Parameters<typeof uiField.format>[0]);
+    const value = uiField.format(
+      record as Parameters<typeof uiField.format>[0],
+    );
+    valueNode = <span data-testid={`field-value-${fieldName}`}>{value}</span>;
   } else {
     // Raw field value
     const raw = record[fieldName];
-    value = raw !== undefined && raw !== null ? String(raw) : "";
+    const value = raw !== undefined && raw !== null ? String(raw) : "";
+    valueNode = <span data-testid={`field-value-${fieldName}`}>{value}</span>;
   }
 
   return (
@@ -114,7 +213,7 @@ export function FieldDisplay<T extends PgTable>({
       >
         {label}:
       </span>
-      <span data-testid={`field-value-${fieldName}`}>{value}</span>
+      {valueNode}
     </div>
   );
 }
