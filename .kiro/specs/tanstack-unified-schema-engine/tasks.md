@@ -353,18 +353,18 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
 - [x] 23. Checkpoint — UI package
   - Ensure all tests in `tanstack-use-ui` pass, ask the user if questions arise.
 
-- [ ] 24. Bootstrap `tanstack-use-ai` package
-  - [ ] 24.1 Create `packages/tanstack-use-ai` directory with `package.json` and `tsconfig.json`
+- [x] 24. Bootstrap `tanstack-use-ai` package
+  - [x] 24.1 Create `packages/tanstack-use-ai` directory with `package.json` and `tsconfig.json`
     - Add `@tanstack/ai` as a dependency
     - Add `@tanstack-use/core` and `@tanstack-use/permissions` as workspace dependencies
     - _Requirements: 13.1_
 
-  - [ ] 24.2 Implement `buildSystemPrompt(app)` in `packages/tanstack-use-ai/src/build-system-prompt.ts`
+  - [x] 24.2 Implement `buildSystemPrompt(app)` in `packages/tanstack-use-ai/src/build-system-prompt.ts`
     - Iterate `app.models`; for each model describe its table name, field names, and which layout sections are defined
     - Return a natural-language string suitable for use as an AI system message
     - _Requirements: 13.3_
 
-  - [ ] 24.3 Write unit tests for `buildSystemPrompt`
+  - [x] 24.3 Write unit tests for `buildSystemPrompt`
     - Test that the prompt mentions every registered model's table name
     - Test that the prompt lists available operations (list/create/detail) based on layout presence
     - Test that a model with no layout sections is described as having no available pages

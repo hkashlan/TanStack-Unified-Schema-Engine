@@ -3,3 +3,4 @@ packages:
   - "packages/tanstack-use-permissions"
   - "packages/tanstack-use-files"
   - "packages/tanstack-use-ui"
+  - "packages/tanstack-use-ai"
