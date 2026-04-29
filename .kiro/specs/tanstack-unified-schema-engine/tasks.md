@@ -392,8 +392,8 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - **Validates: Requirements 13.2, 13.8**
     - _Requirements: 10.12_
 
-- [ ] 26. Implement `ChatBot` component in `tanstack-use-ai`
-  - [ ] 26.1 Create `packages/tanstack-use-ai/src/ChatBot.tsx`
+- [x] 26. Implement `ChatBot` component in `tanstack-use-ai`
+  - [x] 26.1 Create `packages/tanstack-use-ai/src/ChatBot.tsx`
     - Accept `app`, `session`, and `adapter` (TanStack AI adapter) as props
     - On mount: call `buildAITools(app, session)` and `buildSystemPrompt(app)`
     - Use TanStack AI's chat hook with the developer-supplied adapter, tools, and system prompt
@@ -407,7 +407,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five p
     - Test that a tool call for a navigation action triggers `navigate()`
     - _Requirements: 13.5, 13.7_
 
-- [ ] 27. Create `packages/tanstack-use-ai/src/index.ts` barrel export
+- [x] 27. Create `packages/tanstack-use-ai/src/index.ts` barrel export
   - Re-export `buildAITools`, `buildSystemPrompt`, `ChatBot`
   - _Requirements: 13.1_
 
