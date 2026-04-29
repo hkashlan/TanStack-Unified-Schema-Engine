@@ -15,6 +15,7 @@ export type {
   ComputedFieldDef,
   InferRecord,
   LayoutDef,
+  ListOptions,
   Model,
   PermissionsDef,
   ServerHooks,

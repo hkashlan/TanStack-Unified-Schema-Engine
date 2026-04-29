@@ -43,6 +43,24 @@ export interface UIFieldDef<T extends PgTable> {
   label?: () => string;
   format?: (record: InferRecord<T>) => string;
   hidden?: boolean | ((record: InferRecord<T>) => boolean);
+  /**
+   * TanStack Form field-level validator.
+   * Called on change and on blur. Return an error string to block submission,
+   * or `undefined` when the value is valid.
+   */
+  validate?: (value: unknown) => string | undefined;
+}
+
+/**
+ * Options for the generated list page.
+ */
+export interface ListOptions {
+  /**
+   * Debounce delay in milliseconds for the search input.
+   * Passed to TanStack Pacer's `useAsyncDebouncer`.
+   * @default 300
+   */
+  searchDebounceMs?: number;
 }
 
 export interface TabDef<T extends PgTable, TComputed extends Record<string, ComputedFieldDef<T>>> {
@@ -55,6 +73,8 @@ export interface LayoutDef<
   TComputed extends Record<string, ComputedFieldDef<T>>,
 > {
   list?: AllFieldKeys<T, TComputed>[]; // absent → no list page
+  /** Options for the generated list page (search debounce, etc.) */
+  listOptions?: ListOptions;
   detail?: TabDef<T, TComputed>[]; // absent → no detail page
   create?: AllFieldKeys<T, TComputed>[]; // absent → no create page
 }

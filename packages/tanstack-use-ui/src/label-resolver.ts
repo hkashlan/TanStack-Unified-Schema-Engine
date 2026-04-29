@@ -8,7 +8,6 @@ import type { Model } from "../../tanstack-use-core/src/types.js";
  * every call so reactive i18n (e.g. Paraglide's `languageTag()`) works without
  * any additional wiring. Falls back to the field key name when absent.
  */
-export function resolveLabel(fieldName: string, model: Model<PgTable>): string {
-  return (model.ui.fields as Record<string, { label?: () => string } | undefined> | undefined)
-    ?.[fieldName]?.label?.() ?? fieldName;
+export function resolveLabel<T extends PgTable>(fieldName: string, model: Model<T>): string {
+  return  model.ui.fields?.[fieldName]?.label?.() ?? fieldName;
 }

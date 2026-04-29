@@ -4,6 +4,8 @@
 
 `tanstack-use` is a TypeScript framework where developers define one model per file using `defineModel()` and the system generates UI pages (list, detail, create) using TanStack Router + TanStack Query, with group-based permissions via Better Auth and file upload with access control. The framework's core principle is **minimal code** — use Drizzle as-is, use Better Auth as-is, and only add what those libraries cannot provide: the UI config layer and the TanStack renderer.
 
+The framework also integrates TanStack Table for rich list views, TanStack Form for validated create/edit forms, TanStack Pacer for debounced search inputs, and TanStack AI for an auto-generated AI chatbot that understands every registered model, page, and permitted action.
+
 ## Glossary
 
 - **Engine**: The `tanstack-use` framework as a whole.
@@ -19,7 +21,8 @@
 - **Group**: A named collection of Members used for permission evaluation, managed entirely by Better Auth's organization plugin.
 - **File_Model**: A file helper created via `fileModel()` that declares storage config and `fileAccess` groups. It produces a text column (storing the file path) for use in a Drizzle table.
 - **Permission_Guard**: The runtime enforcement layer that evaluates `can()` using Better Auth group memberships.
-- **TanStack_Renderer**: The UI module that reads `UIConfig` directly to render list, detail, and create pages using TanStack Router + TanStack Query.
+- **TanStack_Renderer**: The UI module that reads `UIConfig` directly to render list, detail, and create pages using TanStack Router + TanStack Query + TanStack Table + TanStack Form.
+- **AI_Agent**: The auto-generated chatbot powered by TanStack AI that derives its knowledge of pages, models, and actions from the App registry at startup.
 
 ---
 
@@ -77,7 +80,7 @@
 #### Acceptance Criteria
 
 1. THE Engine SHALL export a `defineApp()` function that accepts a configuration object containing `models` (array of Model objects) and `auth` (a pre-configured Better Auth instance).
-2. WHEN `defineApp()` is called, THE Engine SHALL register all provided Models in a global registry accessible to the TanStack_Renderer and Permission_Guard.
+2. WHEN `defineApp()` is called, THE Engine SHALL register all provided Models in a global registry accessible to the TanStack_Renderer, Permission_Guard, and AI_Agent.
 3. IF `defineApp()` is called with two Models that share the same table name, THEN THE Engine SHALL throw a runtime error identifying the duplicate.
 4. THE `auth` property SHALL accept a Better Auth instance created via `betterAuth()` with the `organization` plugin enabled.
 5. THE Engine SHALL NOT generate any custom auth entity schema — all user, member, and group data is managed entirely by the provided Better Auth instance.
@@ -117,13 +120,13 @@
 
 ### Requirement 7: TanStack UI Rendering
 
-**User Story:** As a developer, I want the framework to generate list, detail, and create pages using TanStack Router and TanStack Query based on the UIConfig, so that I get a fully functional UI without writing page components manually.
+**User Story:** As a developer, I want the framework to generate list, detail, and create pages using TanStack Router, TanStack Query, TanStack Table, and TanStack Form based on the UIConfig, so that I get a fully functional UI without writing page components manually.
 
 #### Acceptance Criteria
 
-1. THE TanStack_Renderer SHALL generate a list page for each Model where `ui.layout.list` is defined, displaying the fields specified in that array.
+1. THE TanStack_Renderer SHALL generate a list page for each Model where `ui.layout.list` is defined, displaying the fields specified in that array using TanStack Table for column management, sorting, and filtering.
 2. THE TanStack_Renderer SHALL generate a detail page for each Model where `ui.layout.detail` is defined, rendering tabs and rows as specified.
-3. THE TanStack_Renderer SHALL generate a create page for each Model where `ui.layout.create` is defined, rendering a form with all non-computed fields listed in that array.
+3. THE TanStack_Renderer SHALL generate a create page for each Model where `ui.layout.create` is defined, rendering a validated form using TanStack Form with all non-computed fields listed in that array.
 4. WHEN a field declares a `format` function in `ui.fields`, THE TanStack_Renderer SHALL call `format(record)` — passing the full typed record — before rendering in list and detail views.
 5. WHEN a detail layout defines multiple tabs, THE TanStack_Renderer SHALL render a tabbed interface where each tab contains its declared rows.
 6. WHEN a row contains multiple field references, THE TanStack_Renderer SHALL render those fields horizontally side by side.
@@ -176,3 +179,55 @@
 8. THE Engine SHALL include tests that verify `beforeCreate` aborting prevents record persistence, and `afterCreate` errors do not roll back persisted records.
 9. FOR ALL valid `UIConfig` objects, the `format` function receiving the full record SHALL produce the same output as calling `format` with a manually constructed equivalent record (round-trip property).
 10. FOR ALL valid permission configs, `can()` SHALL return `true` if and only if the member's groups intersect the allowed groups (or the allowed groups list is empty).
+11. THE Engine SHALL include tests that verify search debouncing fires the query only after the configured delay, not on every keystroke.
+12. THE Engine SHALL include tests that verify `buildAITools()` produces one tool per permitted operation per model, and that tools respect the model's permission config.
+
+---
+
+### Requirement 11: Rich List Views with TanStack Table
+
+**User Story:** As a developer, I want the generated list page to support sorting, filtering, and pagination out of the box, so that users can navigate large datasets without any additional configuration.
+
+#### Acceptance Criteria
+
+1. THE TanStack_Renderer SHALL use TanStack Table (`@tanstack/react-table`) to render the list page, with column definitions derived from `ui.layout.list`.
+2. THE list page SHALL support client-side column sorting by clicking column headers; sort state SHALL be reflected in the URL via TanStack Router search params.
+3. THE list page SHALL render a search input above the table; user input SHALL be debounced using TanStack Pacer (`@tanstack/pacer`) before triggering a filtered query.
+4. THE debounce delay for the search input SHALL default to 300 ms and SHALL be configurable per-model via `ui.layout.listOptions.searchDebounceMs`.
+5. THE list page SHALL support pagination; page and page size SHALL be reflected in the URL via TanStack Router search params.
+6. WHEN `ui.layout.list` is absent, THE Engine SHALL generate no list page and no TanStack Table instance for that model.
+7. THE column definitions passed to TanStack Table SHALL use `resolveLabel` for header text, so i18n label functions are respected.
+
+---
+
+### Requirement 12: Validated Forms with TanStack Form
+
+**User Story:** As a developer, I want the generated create and edit pages to use TanStack Form for field-level validation and dirty-state tracking, so that users get immediate feedback without any additional form wiring.
+
+#### Acceptance Criteria
+
+1. THE TanStack_Renderer SHALL use TanStack Form (`@tanstack/react-form`) to render create and edit forms, with fields derived from `ui.layout.create` (excluding computed fields).
+2. WHEN a field declares a `validate` function in `ui.fields`, THE Engine SHALL register it as a TanStack Form field-level validator; validation SHALL run on change and on blur.
+3. WHEN a form field fails validation, THE TanStack_Renderer SHALL display the validation error message below the field.
+4. THE submit button SHALL be disabled while the form is submitting or while any field has a validation error.
+5. WHEN `client.onSubmit` is defined, THE Engine SHALL call it with the validated record values before POSTing to the API.
+6. THE form SHALL track dirty state; navigating away from a dirty form SHALL prompt the user for confirmation via TanStack Router's `onBeforeLoad` guard.
+
+---
+
+### Requirement 13: AI Chatbot with TanStack AI
+
+**User Story:** As a developer, I want the framework to auto-generate an AI chatbot that knows every registered model, page, and permitted action, so that end users can interact with the application using natural language without any manual tool configuration.
+
+#### Acceptance Criteria
+
+1. THE Engine SHALL export a `buildAITools(app, session)` function from a new `tanstack-use-ai` package that derives AI tool definitions from `app.models` using TanStack AI (`@tanstack/ai`).
+2. FOR EACH model in the App registry, `buildAITools` SHALL generate tools for each operation (`list`, `create`, `update`, `delete`) that the session's member is permitted to perform, as determined by `can()`.
+3. THE Engine SHALL export a `buildSystemPrompt(app)` function that generates a natural-language description of all registered models, their fields, and their permitted operations for use as the AI system prompt.
+4. WHEN the AI agent calls a generated tool, THE Engine SHALL execute the corresponding API operation (e.g. `GET /api/{tableName}`, `POST /api/{tableName}`) and return the result to the agent.
+5. WHEN the AI agent navigates to a page as part of a tool response, THE Engine SHALL call TanStack Router's `navigate()` to perform the navigation programmatically.
+6. THE AI provider adapter SHALL be configurable by the developer — the framework SHALL NOT hard-code a specific LLM provider; developers pass a TanStack AI adapter (e.g. `openaiText("gpt-4o")`) to `defineApp()` or to the chatbot component directly.
+7. THE chatbot component SHALL stream responses using TanStack AI's built-in streaming support.
+8. WHEN a tool call would perform an operation the session's member is not permitted to perform, THE Engine SHALL reject the tool call and return an error message to the AI agent rather than throwing an unhandled exception.
+
+---

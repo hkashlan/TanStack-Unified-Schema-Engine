@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four packages: `tanstack-use-core`, `tanstack-use-permissions`, `tanstack-use-files`, and `tanstack-use-ui`. Tasks follow TDD order — types and tests are established before or alongside each feature, with property-based tests (fast-check) and unit tests (Vitest) throughout.
+Implement the `tanstack-use` meta-framework as a TypeScript monorepo with five packages: `tanstack-use-core`, `tanstack-use-permissions`, `tanstack-use-files`, `tanstack-use-ui`, and `tanstack-use-ai`. Tasks follow TDD order — types and tests are established before or alongside each feature, with property-based tests (fast-check) and unit tests (Vitest) throughout.
 
 ## Tasks
 
@@ -16,9 +16,11 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
 
 - [-] 2. Define core TypeScript types in `tanstack-use-core`
   - [x] 2.1 Create `packages/tanstack-use-core/src/types.ts` with all exported interfaces and type aliases
-    - Export `InferRecord<T>`, `AllFieldKeys<T, TComputed>`, `ComputedFieldDef<T>`, `UIFieldDef<T>`, `TabDef`, `LayoutDef`, `TranslationConfig`, `PermissionsDef`, `ServerHooks<T>`, `ClientHooks<T>`, `UIConfig<T>`, `Model<T>`, `App`
+    - Export `InferRecord<T>`, `AllFieldKeys<T, TComputed>`, `ComputedFieldDef<T>`, `UIFieldDef<T>`, `TabDef`, `LayoutDef`, `ListOptions`, `PermissionsDef`, `ServerHooks<T>`, `ClientHooks<T>`, `UIConfig<T>`, `Model<T>`, `App`
     - Use non-empty tuple `[keyof T["_"]["columns"], ...(keyof T["_"]["columns"])[]]` for `ComputedFieldDef.dependsOn`
-    - _Requirements: 1.1, 1.4, 2.4, 3.1, 3.4, 8.1_
+    - Add `validate?: (value: unknown) => string | undefined` to `UIFieldDef`
+    - Add `listOptions?: ListOptions` to `LayoutDef` with `searchDebounceMs?: number`
+    - _Requirements: 1.1, 1.4, 2.4, 3.1, 3.4, 8.1, 11.4, 12.2_
 
   - [x] 2.2 Write compile-time type tests for core types using `tsd`
     - Verify `InferRecord` resolves correctly from a sample `PgTable`
@@ -184,7 +186,8 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
 
 - [x] 16. Implement route generation in `tanstack-use-ui`
   - [x] 16.1 Create `packages/tanstack-use-ui/src/create-routes.ts`
-    - Implement `createRoutes(app: App): RouteObject[]`
+    - Implement `createRoutes(app: App, rootRoute: AnyRootRoute): AnyRoute[]`
+    - Also export `buildRouteDescriptors(app): RouteDescriptor[]` for testing without a router
     - Iterate `app.models`; for each model register list route if `ui.layout?.list` is defined, detail route if `ui.layout?.detail` is defined, create route if `ui.layout?.create` is defined
     - Use `model.table[Symbol.for("drizzle:Name")]` as the URL segment
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 7.1, 7.2, 7.3_
@@ -193,6 +196,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Test no routes registered when `ui.layout` is entirely absent
     - Test only list route registered when only `ui.layout.list` is defined
     - Test all three routes registered when all layout sections are defined
+    - Test `createRoutes` returns real TanStack Router route instances that can be added to a root route
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 10.5_
 
   - [x] 16.3 Write property test for page existence (Property 6)
@@ -201,25 +205,39 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - **Validates: Requirements 1.5, 1.6, 1.7, 1.8**
     - _Requirements: 10.5_
 
-- [ ] 17. Implement `ListPage` component in `tanstack-use-ui`
-  - [ ] 17.1 Create `packages/tanstack-use-ui/src/components/ListPage.tsx`
-    - Read `model.ui.layout.list` for column order
-    - Use TanStack Query `useQuery` to fetch all records from `GET /api/{tableName}`
-    - For each column: if it is a computed field key, call `cf.format ? cf.format(row) : String(cf.compute(row))`; otherwise call `uiField?.format ? uiField.format(row) : row[col]`
-    - Render a `<table>` with headers resolved via `resolveLabel`
-    - _Requirements: 7.1, 7.4, 3.3_
+- [x] 17. Implement `ListPage` component with TanStack Table and TanStack Pacer
+  - [x] 17.1 Install `@tanstack/react-table` and `@tanstack/pacer` in `tanstack-use-ui`
+    - Add `@tanstack/react-table` and `@tanstack/pacer` as dependencies of `packages/tanstack-use-ui`
+    - _Requirements: 11.1, 11.3_
 
-  - [ ]* 17.2 Write unit tests for `ListPage`
-    - Test that columns match `ui.layout.list` order
+  - [x] 17.2 Create `packages/tanstack-use-ui/src/components/ListPage.tsx`
+    - Derive TanStack Table column definitions from `model.ui.layout.list`; use `resolveLabel` for header text
+    - Use TanStack Query `useQuery` to fetch records from `GET /api/{tableName}`
+    - Add a search `<input>` debounced via TanStack Pacer `useAsyncDebouncer` with delay from `model.ui.layout.listOptions?.searchDebounceMs ?? 300`
+    - Pass debounced search term as a query param to the fetch function
+    - Reflect sort state and pagination in URL via TanStack Router search params
+    - For computed field cells: call `cf.format ? cf.format(row.original) : String(cf.compute(row.original))`
+    - For regular field cells: call `uiField?.format ? uiField.format(row.original) : row.original[col]`
+    - _Requirements: 7.1, 7.4, 3.3, 11.1, 11.2, 11.3, 11.5, 11.7_
+
+  - [x] 17.3 Write unit tests for `ListPage`
+    - Test that column headers match `resolveLabel` output for each field in `ui.layout.list`
     - Test that `format(record)` is called with the full record (not just the field value)
     - Test that computed field values are rendered via `compute(record)`
-    - _Requirements: 7.4, 3.3, 10.7_
+    - Test that the search input is rendered and wired to the debouncer
+    - _Requirements: 7.4, 3.3, 11.7, 10.7_
 
-  - [ ]* 17.3 Write property test for format/compute receiving full record (Property 3)
+  - [x] 17.4 Write property test for format/compute receiving full record (Property 3)
     - **Property 3: format and compute receive the full record**
     - Generate random records and format/compute functions; assert the value rendered equals calling the function with the full record object
     - **Validates: Requirements 3.5, 7.4**
     - _Requirements: 10.7, 10.9_
+
+  - [x] 17.5 Write property test for search debounce (Property 9)
+    - **Property 9: Search debounce fires exactly once per settled input**
+    - Use fake timers; generate sequences of keystrokes within the debounce window; assert the query fires exactly once after the window expires
+    - **Validates: Requirements 11.3, 11.4**
+    - _Requirements: 10.11_
 
 - [ ] 18. Implement `DetailPage` component in `tanstack-use-ui`
   - [ ] 18.1 Create `packages/tanstack-use-ui/src/components/DetailPage.tsx`
@@ -234,20 +252,30 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Test `<FieldDisplay>` calls `format` with the full record
     - _Requirements: 7.5, 7.6, 10.7_
 
-- [ ] 19. Implement `CreatePage` component and `onSubmit` hook in `tanstack-use-ui`
-  - [ ] 19.1 Create `packages/tanstack-use-ui/src/components/CreatePage.tsx`
-    - Filter `model.ui.layout.create` to exclude computed field keys
-    - Render a `<form>` with `<FieldInput>` for each non-computed field
-    - Implement `handleSubmit`: if `model.ui.client?.onSubmit` is defined, call it with the record and use the returned value; then POST to `/api/{tableName}`
-    - _Requirements: 7.3, 7.7, 3.2_
+- [ ] 19. Implement `CreatePage` component with TanStack Form
+  - [ ] 19.1 Install `@tanstack/react-form` in `tanstack-use-ui`
+    - Add `@tanstack/react-form` as a dependency of `packages/tanstack-use-ui`
+    - _Requirements: 12.1_
 
-  - [ ]* 19.2 Write unit tests for `CreatePage`
+  - [ ] 19.2 Create `packages/tanstack-use-ui/src/components/CreatePage.tsx`
+    - Filter `model.ui.layout.create` to exclude computed field keys
+    - Use TanStack Form `useForm` with field validators from `ui.fields[fieldName]?.validate`
+    - Validators run on change and on blur per field
+    - Display validation error messages below each field
+    - Disable the submit button while submitting or while any field has a validation error
+    - Implement `handleSubmit`: if `model.ui.client?.onSubmit` is defined, call it with the validated record; then POST to `/api/{tableName}`
+    - Add a dirty-state navigation guard via TanStack Router's `onBeforeLoad` that prompts the user before leaving an unsaved form
+    - _Requirements: 7.3, 7.7, 3.2, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
+
+  - [ ]* 19.3 Write unit tests for `CreatePage`
     - Test computed fields are excluded from the form field list
     - Test `onSubmit` hook is called with the full record before submission
     - Test the value submitted to the API is the return value of `onSubmit`, not the original record
-    - _Requirements: 3.2, 7.7, 10.2, 10.7_
+    - Test that a field with a failing `validate` function shows an error message
+    - Test that the submit button is disabled when a field has a validation error
+    - _Requirements: 3.2, 7.7, 10.2, 10.7, 12.3, 12.4_
 
-  - [ ]* 19.3 Write property test for onSubmit transformation (Property 7)
+  - [ ]* 19.4 Write property test for onSubmit transformation (Property 7)
     - **Property 7: onSubmit transformation is applied before submission**
     - Generate random records and transform functions; assert the value POSTed equals `onSubmit(record)`
     - **Validates: Requirements 7.7**
@@ -278,38 +306,102 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - _Requirements: 5.4, 10.3_
 
 - [ ] 22. Create `packages/tanstack-use-ui/src/index.ts` barrel export
-  - Re-export `createRoutes`, `ListPage`, `DetailPage`, `CreatePage`, `FieldDisplay`, `FieldInput`
+  - Re-export `createRoutes`, `buildRouteDescriptors`, `ListPage`, `DetailPage`, `CreatePage`, `FieldDisplay`, `FieldInput`
   - _Requirements: 7.1, 7.2, 7.3_
 
 - [ ] 23. Checkpoint — UI package
   - Ensure all tests in `tanstack-use-ui` pass, ask the user if questions arise.
 
-- [ ] 24. Integration tests across packages
-  - [ ] 24.1 Write an integration test that defines a model, registers it with `defineApp()`, generates routes, and asserts the correct routes are created
+- [ ] 24. Bootstrap `tanstack-use-ai` package
+  - [ ] 24.1 Create `packages/tanstack-use-ai` directory with `package.json` and `tsconfig.json`
+    - Add `@tanstack/ai` as a dependency
+    - Add `@tanstack-use/core` and `@tanstack-use/permissions` as workspace dependencies
+    - _Requirements: 13.1_
+
+  - [ ] 24.2 Implement `buildSystemPrompt(app)` in `packages/tanstack-use-ai/src/build-system-prompt.ts`
+    - Iterate `app.models`; for each model describe its table name, field names, and which layout sections are defined
+    - Return a natural-language string suitable for use as an AI system message
+    - _Requirements: 13.3_
+
+  - [ ] 24.3 Write unit tests for `buildSystemPrompt`
+    - Test that the prompt mentions every registered model's table name
+    - Test that the prompt lists available operations (list/create/detail) based on layout presence
+    - Test that a model with no layout sections is described as having no available pages
+    - _Requirements: 13.3_
+
+- [ ] 25. Implement `buildAITools(app, session)` in `tanstack-use-ai`
+  - [ ] 25.1 Create `packages/tanstack-use-ai/src/build-ai-tools.ts`
+    - For each model and each operation (`list`, `create`, `update`, `delete`), call `can(session, target, app)`
+    - Register a TanStack AI `toolDefinition` only for permitted operations
+    - Each tool's `execute` function calls the corresponding API endpoint and returns the result
+    - The `list` tool executor calls `GET /api/{tableName}` and returns the records array
+    - The `create` tool executor calls `POST /api/{tableName}` with the provided fields
+    - _Requirements: 13.1, 13.2, 13.4, 13.8_
+
+  - [ ] 25.2 Write unit tests for `buildAITools`
+    - Test that a session with `create` permission gets a `create{ModelName}` tool
+    - Test that a session without `create` permission does NOT get a `create{ModelName}` tool
+    - Test that an empty-permission model (open access) generates tools for all operations
+    - Test that the `list` tool executor calls the correct API endpoint
+    - _Requirements: 13.2, 13.8, 10.12_
+
+  - [ ] 25.3 Write property test for AI tool permission boundaries (Property 8)
+    - **Property 8: AI tools respect permission boundaries**
+    - Generate random permission configs and member group lists; assert `buildAITools` generates a tool for operation X iff `can()` returns `true` for that operation
+    - **Validates: Requirements 13.2, 13.8**
+    - _Requirements: 10.12_
+
+- [ ] 26. Implement `ChatBot` component in `tanstack-use-ai`
+  - [ ] 26.1 Create `packages/tanstack-use-ai/src/ChatBot.tsx`
+    - Accept `app`, `session`, and `adapter` (TanStack AI adapter) as props
+    - On mount: call `buildAITools(app, session)` and `buildSystemPrompt(app)`
+    - Use TanStack AI's chat hook with the developer-supplied adapter, tools, and system prompt
+    - Stream responses; render a floating chat panel with a toggle button
+    - When a tool response includes a navigation target, call TanStack Router's `navigate()`
+    - _Requirements: 13.1, 13.5, 13.6, 13.7_
+
+  - [ ]* 26.2 Write unit tests for `ChatBot`
+    - Test that the chat panel renders and can be toggled open/closed
+    - Test that `buildAITools` is called with the correct session on mount
+    - Test that a tool call for a navigation action triggers `navigate()`
+    - _Requirements: 13.5, 13.7_
+
+- [ ] 27. Create `packages/tanstack-use-ai/src/index.ts` barrel export
+  - Re-export `buildAITools`, `buildSystemPrompt`, `ChatBot`
+  - _Requirements: 13.1_
+
+- [ ] 28. Integration tests across packages
+  - [ ] 28.1 Write an integration test that defines a model, registers it with `defineApp()`, generates routes, and asserts the correct routes are created
     - Use a real Drizzle table definition (in-memory, no DB connection needed)
     - Assert list/detail/create routes exist only when the corresponding layout sections are defined
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 4.2_
 
-  - [ ]* 24.2 Write an integration test for the full permission flow
+  - [ ]* 28.2 Write an integration test for the full permission flow
     - Define a model with restricted `create` permission
     - Call `can()` with a session that has a matching group → assert `true`
     - Call `can()` with a session that has no matching group → assert `false`
     - _Requirements: 5.2, 5.3_
 
-  - [ ]* 24.3 Write an integration test for the full file upload flow
+  - [ ]* 28.3 Write an integration test for the full file upload flow
     - Define a `fileModel()` with `fileAccess: ["admin"]`
     - Call `handleUpload` with an admin session → assert path returned
     - Call `handleUpload` with a non-admin session → assert `AuthorizationError` thrown
     - _Requirements: 6.3, 6.5_
 
-  - [ ]* 24.4 Write an integration test for server lifecycle hooks
+  - [ ]* 28.4 Write an integration test for server lifecycle hooks
     - Define a model with `beforeCreate` that throws
     - Call `executeCreate` → assert no DB insert and error propagated
     - Define a model with `afterCreate` that throws
     - Call `executeCreate` → assert record persisted and error logged
     - _Requirements: 8.2, 8.3_
 
-- [ ] 25. Final checkpoint — all packages
+  - [ ]* 28.5 Write an integration test for the AI tools + permission flow
+    - Define a model with `create: ["admin"]` permission
+    - Call `buildAITools` with an admin session → assert `createEmployee` tool present
+    - Call `buildAITools` with a non-admin session → assert `createEmployee` tool absent
+    - _Requirements: 13.2, 13.8_
+
+- [ ] 29. Final checkpoint — all packages
   - Ensure all tests across all packages pass, ask the user if questions arise.
 
 - [x] 26. Support callable label (`() => string`) in `UIFieldDef` for i18n
@@ -331,6 +423,7 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - Each task references specific requirements for traceability
 - Checkpoints ensure incremental validation at package boundaries
-- Property tests validate universal correctness properties (Properties 1–7 from the design document)
+- Property tests validate universal correctness properties (Properties 1–9 from the design document)
 - Unit tests validate specific examples and edge cases
 - Compile-time type tests (tsd) validate TypeScript enforcement of layout and dependsOn constraints
+- The AI chatbot (`tanstack-use-ai`) is provider-agnostic — developers supply a TanStack AI adapter; no LLM is hard-coded
