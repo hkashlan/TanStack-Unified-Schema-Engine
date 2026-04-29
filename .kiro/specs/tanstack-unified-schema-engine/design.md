@@ -15,6 +15,7 @@ The core design principle is **minimal code**: use Drizzle as-is, use Better Aut
 - **Better Auth for everything auth-related**: Authentication, users, members, and groups are managed entirely by a pre-configured Better Auth instance with the `organization` plugin. The framework generates no auth schema.
 - **`fileModel()` helper**: File fields are a text column (storing the path) produced by a `fileModel()` helper. No separate file table abstraction is needed in the model definition.
 - **Full typed record everywhere**: `compute`, `format`, `onSubmit`, and hook contexts all receive the full typed record inferred from the Drizzle table.
+- **`label` is always a function**: `UIFieldDef.label` is typed as `() => string`. Developers pass a Paraglide message function (e.g. `label: m.employeeName`) or any zero-argument function. This eliminates the `TranslationConfig` block entirely — there is no separate translations config, no locale key mapping, and no adapter setup. Static labels are `() => "Full Name"`. The renderer calls `label()` on every render, so locale switches are automatically reflected.
 
 ---
 
@@ -81,7 +82,13 @@ export interface ComputedFieldDef<T extends PgTable> {
 
 /** Per-field UI override — format receives the full typed record for context */
 export interface UIFieldDef<T extends PgTable> {
-  label?: string;
+  /**
+   * Zero-argument function returning the display label.
+   * Pass a Paraglide message function (e.g. `label: m.employeeName`) for
+   * reactive i18n, or a plain arrow function for static text.
+   * Falls back to the field key name when absent.
+   */
+  label?: () => string;
   format?: (record: InferRecord<T>) => string;
   hidden?: boolean | ((record: InferRecord<T>) => boolean);
 }
@@ -101,12 +108,6 @@ export interface LayoutDef<
   list?: AllFieldKeys<T, TComputed>[];    // absent → no list page
   detail?: TabDef<T, TComputed>[];        // absent → no detail page
   create?: AllFieldKeys<T, TComputed>[];  // absent → no create page
-}
-
-export interface TranslationConfig {
-  fieldLabels?: Record<string, string>;
-  pageTitle?: { list?: string; detail?: string; create?: string };
-  messages?: Record<string, string>;
 }
 
 export interface PermissionsDef {
@@ -131,7 +132,6 @@ export interface UIConfig<T extends PgTable> {
   fields?: Partial<Record<keyof T["_"]["columns"], UIFieldDef<T>>>;
   computedFields?: Record<string, ComputedFieldDef<T>>;
   layout?: LayoutDef<T, Record<string, ComputedFieldDef<T>>>;
-  translations?: TranslationConfig;
   permissions?: PermissionsDef;
   server?: ServerHooks<T>;
   client?: ClientHooks<T>;
@@ -240,6 +240,10 @@ const employeeTable = pgTable("employee", {
 });
 
 const employeeModel = defineModel(employeeTable, {
+  fields: {
+    name:   { label: () => "Employee Name" }, // or: label: m.employeeName
+    avatar: { label: () => "Profile Photo" },
+  },
   layout: {
     list: ["id", "name", "avatar"],
     detail: [{ label: "Info", rows: [["name", "avatar"]] }],
@@ -260,10 +264,9 @@ defineApp({ models: [employeeModel], auth });
 The TanStack renderer reads `UIConfig` directly — there is no transformation step. The renderer accesses:
 
 - `model.table` — the Drizzle table (for column metadata and query building)
-- `model.ui.fields` — per-field label/format/hidden overrides
+- `model.ui.fields` — per-field `label` / `format` / `hidden` overrides
 - `model.ui.computedFields` — computed display fields
 - `model.ui.layout` — which pages exist and what fields they show
-- `model.ui.translations` — i18n strings
 - `model.ui.permissions` — group-based access rules
 - `model.ui.server` / `model.ui.client` — lifecycle hooks
 
@@ -360,10 +363,10 @@ For each Model in app.models:
 
 ```
 function resolveLabel(fieldName: string, model: Model<any>): string:
-  label = model.ui.fields?.[fieldName]?.label
-       ?? model.ui.translations?.fieldLabels?.[fieldName]
-       ?? fieldName   // fallback to key name
+  return model.ui.fields?.[fieldName]?.label?.() ?? fieldName
 ```
+
+The `label` function is called on every render — locale switches (e.g. via Paraglide's `languageTag()`) are automatically reflected without any additional wiring.
 
 **List page rendering**:
 
@@ -547,7 +550,7 @@ async function handleUpload(req, app):
 | `beforeCreate` throws | Create operation aborted, error propagated to caller |
 | `afterCreate` throws | Error logged, record NOT rolled back |
 | `ui.layout` absent entirely | No pages generated for that model (by design) |
-| Active locale key absent from `translations` | Falls back to field key name as label |
+| `label` absent on a field | Falls back to field key name as label |
 
 ---
 
@@ -577,7 +580,7 @@ Property tests run a minimum of 100 iterations each. Each property test is tagge
 - File upload rejected when member groups don't intersect `fileAccess`
 - File upload accepted when member groups intersect `fileAccess`
 - No list/detail/create route registered when corresponding layout section is absent
-- Translated labels rendered when locale matches `translations.fieldLabels`
+- `label` function called and its return value used as the field label; field key name used when `label` is absent
 - `beforeCreate` error aborts create; record not persisted
 - `afterCreate` error logged; record not rolled back
 

@@ -128,7 +128,6 @@
 5. WHEN a detail layout defines multiple tabs, THE TanStack_Renderer SHALL render a tabbed interface where each tab contains its declared rows.
 6. WHEN a row contains multiple field references, THE TanStack_Renderer SHALL render those fields horizontally side by side.
 7. WHEN a `client.onSubmit` hook is defined on a Model, THE TanStack_Renderer SHALL invoke the hook with the full typed record before submitting the create or update request.
-8. WHEN an active locale is set, THE TanStack_Renderer SHALL resolve field labels from the Model's `translations` config for that locale before rendering.
 
 ---
 
@@ -147,17 +146,17 @@
 
 ---
 
-### Requirement 9: Translations
+### Requirement 9: Field Labels and i18n
 
-**User Story:** As a developer, I want to provide translations for field labels and page titles in my model definition, so that the rendered UI displays localized text based on the active locale.
+**User Story:** As a developer, I want to provide a label function on each field so that the rendered UI displays the correct text, including localized text when using an i18n library like Paraglide JS.
 
 #### Acceptance Criteria
 
-1. THE Engine SHALL support a `translations` property on `UIConfig` that accepts a `TranslationConfig` object with `fieldLabels`, `pageTitle`, and `messages` sub-keys.
-2. WHEN an active locale is set, THE TanStack_Renderer SHALL use the corresponding entry from `translations` to resolve field labels and page titles.
-3. WHEN a field key is present in `translations.fieldLabels`, THE TanStack_Renderer SHALL display that string as the field label.
-4. WHEN a field key is absent from `translations.fieldLabels`, THE TanStack_Renderer SHALL fall back to the field key name as the label.
-5. WHEN no `translations` config is provided, THE TanStack_Renderer SHALL use field key names as labels.
+1. THE Engine SHALL support a `label` property on `UIFieldDef` typed as `() => string` — a zero-argument function that returns the display string.
+2. WHEN `label` is defined on a field, THE TanStack_Renderer SHALL call `label()` on every render and use the returned string as the field label.
+3. WHEN `label` is absent on a field, THE TanStack_Renderer SHALL fall back to the field key name as the label.
+4. THE `label` function SHALL be called on every render so that locale switches (e.g. via Paraglide's reactive `languageTag()`) are automatically reflected without additional wiring.
+5. THE Engine SHALL NOT provide a `translations` config block, locale key mapping, or adapter setup — i18n is handled entirely by the function passed as `label`.
 
 ---
 
@@ -172,7 +171,7 @@
 3. THE Engine SHALL include tests that verify `can(session, "ModelName.operation")` returns `false` for a member with no matching group and `true` for a member with a matching group.
 4. THE Engine SHALL include tests that verify file upload is rejected when the member's groups are not listed in `fileAccess` and accepted when they are.
 5. THE Engine SHALL include tests that verify no list/detail/create page is generated when the corresponding `ui.layout` section is absent.
-6. THE Engine SHALL include tests that verify translated field labels are rendered when an active locale matches a `translations` entry.
+6. THE Engine SHALL include tests that verify the `label` function is called and its return value used as the field label, and that the field key name is used when `label` is absent.
 7. THE Engine SHALL include tests that verify `compute` and `format` functions receive the full typed record.
 8. THE Engine SHALL include tests that verify `beforeCreate` aborting prevents record persistence, and `afterCreate` errors do not roll back persisted records.
 9. FOR ALL valid `UIConfig` objects, the `format` function receiving the full record SHALL produce the same output as calling `format` with a manually constructed equivalent record (round-trip property).

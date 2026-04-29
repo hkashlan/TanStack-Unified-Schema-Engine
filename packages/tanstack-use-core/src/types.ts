@@ -30,9 +30,17 @@ export interface ComputedFieldDef<T extends PgTable> {
   format?: (record: InferRecord<T>) => string;
 }
 
-/** Per-field UI override — format receives the full typed record for context */
+/**
+ * Per-field UI override.
+ *
+ * `label` is a zero-argument function returning the display string.
+ * Pass a Paraglide message function (e.g. `label: m.employeeName`) for
+ * reactive i18n, or a plain arrow function for static text: `() => "Full Name"`.
+ * The function is called on every render, so locale switches are automatically
+ * reflected. Falls back to the field key name when absent.
+ */
 export interface UIFieldDef<T extends PgTable> {
-  label?: string;
+  label?: () => string;
   format?: (record: InferRecord<T>) => string;
   hidden?: boolean | ((record: InferRecord<T>) => boolean);
 }
@@ -49,12 +57,6 @@ export interface LayoutDef<
   list?: AllFieldKeys<T, TComputed>[]; // absent → no list page
   detail?: TabDef<T, TComputed>[]; // absent → no detail page
   create?: AllFieldKeys<T, TComputed>[]; // absent → no create page
-}
-
-export interface TranslationConfig {
-  fieldLabels?: Record<string, string>;
-  pageTitle?: { list?: string; detail?: string; create?: string };
-  messages?: Record<string, string>;
 }
 
 export interface PermissionsDef {
@@ -79,7 +81,6 @@ export interface UIConfig<T extends PgTable> {
   fields?: Partial<Record<keyof T["_"]["columns"], UIFieldDef<T>>>;
   computedFields?: Record<string, ComputedFieldDef<T>>;
   layout?: LayoutDef<T, Record<string, ComputedFieldDef<T>>>;
-  translations?: TranslationConfig;
   permissions?: PermissionsDef;
   server?: ServerHooks<T>;
   client?: ClientHooks<T>;

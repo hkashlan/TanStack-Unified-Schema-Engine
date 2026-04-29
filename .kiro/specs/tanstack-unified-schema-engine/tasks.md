@@ -169,33 +169,33 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
     - Test execution order: `beforeCreate` → persist → `afterCreate`
     - _Requirements: 8.2, 8.3, 8.4, 10.8_
 
-- [ ] 15. Implement label resolution and translation utilities in `tanstack-use-ui`
-  - [ ] 15.1 Create `packages/tanstack-use-ui/src/label-resolver.ts`
-    - Implement `resolveLabel(fieldName: string, model: Model<any>, locale?: string): string`
-    - Priority: `ui.fields[fieldName].label` → `translations.fieldLabels[fieldName]` → `fieldName`
-    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+- [x] 15. Implement label resolution in `tanstack-use-ui`
+  - [x] 15.1 Create `packages/tanstack-use-ui/src/label-resolver.ts`
+    - Implement `resolveLabel(fieldName: string, model: Model<any>): string`
+    - Call `model.ui.fields?.[fieldName]?.label?.()` if defined; fall back to `fieldName`
+    - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-  - [ ]* 15.2 Write unit tests for label resolution
-    - Test explicit `ui.fields[fieldName].label` takes priority
-    - Test `translations.fieldLabels` used when no explicit label
-    - Test fallback to field key name when no translation exists
-    - Test fallback when no `translations` config is provided at all
-    - _Requirements: 9.3, 9.4, 9.5, 10.6_
+  - [x] 15.2 Write unit tests for label resolution
+    - Test `label` function is called and its return value used as the label
+    - Test fallback to field key name when `label` is absent
+    - Test fallback when the field has no entry in `fields` at all
+    - Test that the function is re-evaluated on each call (reactive locale support)
+    - _Requirements: 9.2, 9.3, 9.4, 10.6_
 
-- [ ] 16. Implement route generation in `tanstack-use-ui`
-  - [ ] 16.1 Create `packages/tanstack-use-ui/src/create-routes.ts`
+- [x] 16. Implement route generation in `tanstack-use-ui`
+  - [x] 16.1 Create `packages/tanstack-use-ui/src/create-routes.ts`
     - Implement `createRoutes(app: App): RouteObject[]`
     - Iterate `app.models`; for each model register list route if `ui.layout?.list` is defined, detail route if `ui.layout?.detail` is defined, create route if `ui.layout?.create` is defined
     - Use `model.table[Symbol.for("drizzle:Name")]` as the URL segment
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 7.1, 7.2, 7.3_
 
-  - [ ]* 16.2 Write unit tests for route generation
+  - [x] 16.2 Write unit tests for route generation
     - Test no routes registered when `ui.layout` is entirely absent
     - Test only list route registered when only `ui.layout.list` is defined
     - Test all three routes registered when all layout sections are defined
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 10.5_
 
-  - [ ]* 16.3 Write property test for page existence (Property 6)
+  - [x] 16.3 Write property test for page existence (Property 6)
     - **Property 6: Page existence matches layout presence**
     - Generate random UIConfig with present/absent layout sections; assert generated routes match exactly the defined sections
     - **Validates: Requirements 1.5, 1.6, 1.7, 1.8**
@@ -311,6 +311,20 @@ Implement the `tanstack-use` meta-framework as a TypeScript monorepo with four p
 
 - [ ] 25. Final checkpoint — all packages
   - Ensure all tests across all packages pass, ask the user if questions arise.
+
+- [x] 26. Support callable label (`() => string`) in `UIFieldDef` for i18n
+  - [x] 26.1 Update `UIFieldDef` in `packages/tanstack-use-core/src/types.ts`
+    - Change `label` to `label?: () => string` (function-only, no string union)
+    - Remove `TranslationConfig` interface and `translations` property from `UIConfig`
+    - _Requirements: 9.1, 9.5_
+
+  - [x] 26.2 Update `resolveLabel` in `packages/tanstack-use-ui/src/label-resolver.ts`
+    - Implementation: `return model.ui.fields?.[fieldName]?.label?.() ?? fieldName`
+    - _Requirements: 9.2, 9.3, 9.4_
+
+  - [x] 26.3 Update tests in `packages/tanstack-use-ui/src/label-resolver.test.ts`
+    - All tests use `() => string` label form only
+    - _Requirements: 9.2, 9.3, 9.4, 10.6_
 
 ## Notes
 

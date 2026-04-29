@@ -19,7 +19,6 @@ export type {
   PermissionsDef,
   ServerHooks,
   TabDef,
-  TranslationConfig,
   UIConfig,
   UIFieldDef,
 } from "./types.js";
