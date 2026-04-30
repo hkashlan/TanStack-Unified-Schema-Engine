@@ -3,8 +3,8 @@ import type { App, BetterAuthInstance, Model } from "./types.js";
 
 export interface AppConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // models: Model<any, any>[];
-  models: Model<PgTable>[];
+  models: Model<any, any>[];
+  // models: Model<PgTable>[];
   auth: BetterAuthInstance;
 }
 
