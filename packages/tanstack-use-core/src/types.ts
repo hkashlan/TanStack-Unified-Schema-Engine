@@ -97,10 +97,13 @@ export interface ClientHooks<T extends PgTable> {
   onSubmit?: (record: InferRecord<T>) => InferRecord<T> | Promise<InferRecord<T>>;
 }
 
-export interface UIConfig<T extends PgTable> {
+export interface UIConfig<
+  T extends PgTable,
+  TComputed extends Record<string, ComputedFieldDef<T>> = Record<string, ComputedFieldDef<T>>,
+> {
   fields?: Partial<Record<keyof T["_"]["columns"], UIFieldDef<T>>>;
-  computedFields?: Record<string, ComputedFieldDef<T>>;
-  layout?: LayoutDef<T, Record<string, ComputedFieldDef<T>>>;
+  computedFields?: TComputed;
+  layout?: LayoutDef<T, TComputed>;
   permissions?: PermissionsDef;
   server?: ServerHooks<T>;
   client?: ClientHooks<T>;
@@ -121,10 +124,13 @@ export interface UIConfig<T extends PgTable> {
   fileFields?: Partial<Record<keyof T["_"]["columns"], { _config: { storage: unknown; fileAccess?: string[] } }>>;
 }
 
-export interface Model<T extends PgTable> {
+export interface Model<
+  T extends PgTable,
+  TComputed extends Record<string, ComputedFieldDef<T>> = Record<string, ComputedFieldDef<T>>,
+> {
   _tag: "Model";
   table: T;
-  ui: UIConfig<T>;
+  ui: UIConfig<T, TComputed>;
 }
 
 export interface App {
