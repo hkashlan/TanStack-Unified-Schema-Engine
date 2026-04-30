@@ -19,7 +19,7 @@ import React from "react";
 // Mock @tanstack/start so createServerFn works without the Vite plugin
 // ---------------------------------------------------------------------------
 
-vi.mock("@tanstack/start", () => ({
+vi.mock("@tanstack/react-start", () => ({
   createServerFn: (_opts?: unknown) => ({
     validator: (validatorFn: (d: unknown) => unknown) => ({
       handler: (handlerFn: (ctx: { data: unknown }) => unknown) => {

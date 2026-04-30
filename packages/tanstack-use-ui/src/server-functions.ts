@@ -11,15 +11,10 @@
  *    `beforeCreate`, `afterCreate`, `beforeUpdate`, and `afterUpdate` hooks
  *    are always invoked
  *
- * Because the hooks are plain async functions defined in the developer's own
- * codebase, breakpoints placed inside them work exactly as expected — the
- * debugger stops there during server function execution with full access to
- * the record and session in scope.
- *
  * Requirements: 14.1–14.12
  */
 
-import { createServerFn } from "@tanstack/start";
+import { createServerFn } from "@tanstack/react-start";
 import { AuthorizationError, can } from "../../tanstack-use-permissions/src/index.js";
 import {
   type DrizzleDb,
@@ -112,42 +107,28 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
   // -------------------------------------------------------------------------
 
   const list = createServerFn({ method: "GET" })
-    .validator((d: ListInput) => d)
+    .inputValidator((d: ListInput) => d)
     .handler(async ({ data }) => {
-      const { tableName, search, sortBy, sortDir, page = 0, pageSize = 20 } = data;
+      const { tableName, page = 0, pageSize = 20 } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      // Permission check — session resolved from app.auth at call time
-      // For list operations we use a system-level check; the session is
-      // obtained from the request context by the caller via middleware.
-      // When permissions.read is empty/absent, access is open (Req 5.3).
-      const allowedGroups = model.ui.permissions?.read ?? [];
-      if (allowedGroups.length > 0) {
-        // No session available at this layer without middleware — open access
-        // when no groups are configured; restricted access requires the caller
-        // to pass session via middleware (see createServerFunctionsWithSession).
-      }
-
-      // Build Drizzle query
       const dbAny = db as unknown as {
         select: () => {
           from: (t: PgTable) => {
-            where?: (cond: unknown) => unknown;
             limit: (n: number) => { offset: (n: number) => Promise<unknown[]> };
           };
         };
       };
 
-      const query = dbAny.select().from(model.table);
-      const results = await (query as unknown as {
-        limit: (n: number) => { offset: (n: number) => Promise<unknown[]> };
-      })
+      const results = await dbAny
+        .select()
+        .from(model.table)
         .limit(pageSize)
         .offset(page * pageSize);
 
-      return results as Record<string, unknown>[];
+      return results as any;
     });
 
   // -------------------------------------------------------------------------
@@ -155,7 +136,7 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
   // -------------------------------------------------------------------------
 
   const get = createServerFn({ method: "GET" })
-    .validator((d: GetInput) => d)
+    .inputValidator((d: GetInput) => d)
     .handler(async ({ data }) => {
       const { tableName, id } = data;
 
@@ -182,7 +163,7 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
         .where(eq(pkDrizzleCol as Parameters<typeof eq>[0], id));
 
       if (!rows[0]) throw new Error(`Record not found: ${tableName}/${id}`);
-      return rows[0] as Record<string, unknown>;
+      return rows[0] as any;
     });
 
   // -------------------------------------------------------------------------
@@ -190,26 +171,22 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
   // -------------------------------------------------------------------------
 
   const create = createServerFn({ method: "POST" })
-    .validator((d: CreateInput) => d)
+    .inputValidator((d: CreateInput) => d)
     .handler(async ({ data }) => {
       const { tableName, record, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      // Permission check (Req 14.3)
       const permitted = await can(session, `${tableName}.create`, app);
       if (!permitted) throw new AuthorizationError();
 
-      // Delegate to executeCreate — runs beforeCreate → persist → afterCreate
-      // (Req 14.4). Developers can place breakpoints inside their hooks and
-      // the debugger will stop there (Req 14.12).
       return executeCreate(
         model,
         record as Parameters<typeof executeCreate>[1],
         session,
         db,
-      );
+      ) as any;
     });
 
   // -------------------------------------------------------------------------
@@ -217,25 +194,22 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
   // -------------------------------------------------------------------------
 
   const update = createServerFn({ method: "POST" })
-    .validator((d: UpdateInput) => d)
+    .inputValidator((d: UpdateInput) => d)
     .handler(async ({ data }) => {
       const { tableName, record, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      // Permission check (Req 14.3)
       const permitted = await can(session, `${tableName}.update`, app);
       if (!permitted) throw new AuthorizationError();
 
-      // Delegate to executeUpdate — runs beforeUpdate → persist → afterUpdate
-      // (Req 14.5)
       return executeUpdate(
         model,
         record as Parameters<typeof executeUpdate>[1],
         session,
         db,
-      );
+      ) as any;
     });
 
   // -------------------------------------------------------------------------
@@ -243,14 +217,13 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
   // -------------------------------------------------------------------------
 
   const remove = createServerFn({ method: "POST" })
-    .validator((d: RemoveInput) => d)
+    .inputValidator((d: RemoveInput) => d)
     .handler(async ({ data }) => {
       const { tableName, id, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      // Permission check (Req 14.3)
       const permitted = await can(session, `${tableName}.delete`, app);
       if (!permitted) throw new AuthorizationError();
 
