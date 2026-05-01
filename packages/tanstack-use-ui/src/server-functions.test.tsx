@@ -77,8 +77,8 @@ function makeDb(returnedRows: unknown[] = [mockRecord]): DrizzleDb {
   };
 }
 
-/** Build an App with configurable permissions and member groups */
-function makeApp(
+/** Build an App and auth adapter with configurable permissions and member groups */
+function makeAppAndAuth(
   permissions: {
     create?: string[];
     update?: string[];
@@ -91,7 +91,8 @@ function makeApp(
   const auth = {
     api: { getActiveMemberGroups: async () => memberGroups },
   };
-  return defineApp({ models: [model], auth });
+  const app = defineApp({ models: [model] });
+  return { app, auth };
 }
 
 afterEach(() => {
@@ -115,7 +116,7 @@ async function callFn(fn: unknown, data: unknown): Promise<unknown> {
 
 describe("createServerFunctions — list", () => {
   it("returns records from the database", async () => {
-    const app = makeApp();
+    const { app, auth } = makeAppAndAuth();
     const db = makeDb([mockRecord]);
     // Extend db with select mock
     (db as unknown as Record<string, unknown>).select = vi
@@ -128,16 +129,16 @@ describe("createServerFunctions — list", () => {
         }),
       });
 
-    const { list } = createServerFunctions(app, db);
+    const { list } = createServerFunctions(app, db, auth);
     const result = await callFn(list, { tableName: "employee" });
 
     expect(result).toEqual([mockRecord]);
   });
 
   it("throws for an unknown table name", async () => {
-    const app = makeApp();
+    const { app, auth } = makeAppAndAuth();
     const db = makeDb();
-    const { list } = createServerFunctions(app, db);
+    const { list } = createServerFunctions(app, db, auth);
 
     await expect(callFn(list, { tableName: "nonexistent" })).rejects.toThrow(
       "Unknown model: nonexistent",
@@ -151,9 +152,9 @@ describe("createServerFunctions — list", () => {
 
 describe("createServerFunctions — create", () => {
   it("calls executeCreate and returns the persisted record when permitted", async () => {
-    const app = makeApp({ create: ["admin"] }, ["admin"]);
+    const { app, auth } = makeAppAndAuth({ create: ["admin"] }, ["admin"]);
     const db = makeDb([mockRecord]);
-    const { create } = createServerFunctions(app, db);
+    const { create } = createServerFunctions(app, db, auth);
 
     const result = await callFn(create, {
       tableName: "employee",
@@ -166,9 +167,9 @@ describe("createServerFunctions — create", () => {
   });
 
   it("throws AuthorizationError when the session lacks create permission", async () => {
-    const app = makeApp({ create: ["admin"] }, ["viewer"]);
+    const { app, auth } = makeAppAndAuth({ create: ["admin"] }, ["viewer"]);
     const db = makeDb();
-    const { create } = createServerFunctions(app, db);
+    const { create } = createServerFunctions(app, db, auth);
 
     await expect(
       callFn(create, {
@@ -183,9 +184,9 @@ describe("createServerFunctions — create", () => {
   });
 
   it("allows create when permissions.create is empty (open access)", async () => {
-    const app = makeApp({ create: [] }, []);
+    const { app, auth } = makeAppAndAuth({ create: [] }, []);
     const db = makeDb([mockRecord]);
-    const { create } = createServerFunctions(app, db);
+    const { create } = createServerFunctions(app, db, auth);
 
     const result = await callFn(create, {
       tableName: "employee",
@@ -206,7 +207,7 @@ describe("createServerFunctions — create", () => {
       server: { beforeCreate },
     });
     const auth = { api: { getActiveMemberGroups: async () => [] } };
-    const app = defineApp({ models: [model], auth });
+    const app = defineApp({ models: [model] });
 
     const db: DrizzleDb = {
       insert: vi.fn().mockReturnValue({
@@ -224,7 +225,7 @@ describe("createServerFunctions — create", () => {
       }),
     };
 
-    const { create } = createServerFunctions(app, db);
+    const { create } = createServerFunctions(app, db, auth);
     await callFn(create, {
       tableName: "employee",
       record: mockRecord,
@@ -241,10 +242,10 @@ describe("createServerFunctions — create", () => {
       server: { beforeCreate },
     });
     const auth = { api: { getActiveMemberGroups: async () => [] } };
-    const app = defineApp({ models: [model], auth });
+    const app = defineApp({ models: [model] });
     const db = makeDb();
 
-    const { create } = createServerFunctions(app, db);
+    const { create } = createServerFunctions(app, db, auth);
     await expect(
       callFn(create, {
         tableName: "employee",
@@ -263,9 +264,9 @@ describe("createServerFunctions — create", () => {
 
 describe("createServerFunctions — update", () => {
   it("calls executeUpdate and returns the persisted record when permitted", async () => {
-    const app = makeApp({ update: ["admin"] }, ["admin"]);
+    const { app, auth } = makeAppAndAuth({ update: ["admin"] }, ["admin"]);
     const db = makeDb([mockRecord]);
-    const { update } = createServerFunctions(app, db);
+    const { update } = createServerFunctions(app, db, auth);
 
     const result = await callFn(update, {
       tableName: "employee",
@@ -279,9 +280,9 @@ describe("createServerFunctions — update", () => {
   });
 
   it("throws AuthorizationError when the session lacks update permission", async () => {
-    const app = makeApp({ update: ["admin"] }, ["viewer"]);
+    const { app, auth } = makeAppAndAuth({ update: ["admin"] }, ["viewer"]);
     const db = makeDb();
-    const { update } = createServerFunctions(app, db);
+    const { update } = createServerFunctions(app, db, auth);
 
     await expect(
       callFn(update, {
@@ -302,7 +303,7 @@ describe("createServerFunctions — update", () => {
 
 describe("createServerFunctions — remove", () => {
   it("throws AuthorizationError when the session lacks delete permission", async () => {
-    const app = makeApp({ delete: ["admin"] }, ["viewer"]);
+    const { app, auth } = makeAppAndAuth({ delete: ["admin"] }, ["viewer"]);
     const db = makeDb();
     // Extend db with delete mock
     (db as unknown as Record<string, unknown>).delete = vi
@@ -311,7 +312,7 @@ describe("createServerFunctions — remove", () => {
         where: vi.fn().mockResolvedValue(undefined),
       });
 
-    const { remove } = createServerFunctions(app, db);
+    const { remove } = createServerFunctions(app, db, auth);
 
     await expect(
       callFn(remove, {
@@ -323,14 +324,14 @@ describe("createServerFunctions — remove", () => {
   });
 
   it("deletes the record when permitted", async () => {
-    const app = makeApp({ delete: [] }, []);
+    const { app, auth } = makeAppAndAuth({ delete: [] }, []);
     const db = makeDb();
     const deleteMock = vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
     });
     (db as unknown as Record<string, unknown>).delete = deleteMock;
 
-    const { remove } = createServerFunctions(app, db);
+    const { remove } = createServerFunctions(app, db, auth);
     await callFn(remove, {
       tableName: "employee",
       id: 1,
@@ -360,9 +361,9 @@ describe("useServerFunctions()", () => {
   });
 
   it("returns the fns object when inside <ServerFunctionsProvider>", () => {
-    const app = makeApp();
+    const { app, auth } = makeAppAndAuth();
     const db = makeDb();
-    const fns = createServerFunctions(app, db);
+    const fns = createServerFunctions(app, db, auth);
 
     const { result } = renderHook(() => useServerFunctions(), {
       wrapper: ({ children }) => (
@@ -374,9 +375,9 @@ describe("useServerFunctions()", () => {
   });
 
   it("provides list, get, create, update, remove functions", () => {
-    const app = makeApp();
+    const { app, auth } = makeAppAndAuth();
     const db = makeDb();
-    const fns = createServerFunctions(app, db);
+    const fns = createServerFunctions(app, db, auth);
 
     const { result } = renderHook(() => useServerFunctions(), {
       wrapper: ({ children }) => (

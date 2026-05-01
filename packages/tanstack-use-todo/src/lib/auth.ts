@@ -1,9 +1,10 @@
-import { betterAuth } from 'better-auth'
-import { tanstackStartCookies } from 'better-auth/tanstack-start'
+import { defineAuth } from "@tanstack-use/permissions";
+import { db } from "#/lib/db";
 
-export const auth = betterAuth({
+export const auth = defineAuth({
+  database: db,
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [tanstackStartCookies()],
-})
+  plugins: [],
+});

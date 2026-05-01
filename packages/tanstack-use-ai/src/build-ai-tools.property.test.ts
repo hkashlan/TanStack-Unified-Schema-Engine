@@ -81,10 +81,10 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             const auth = {
               api: { getActiveMemberGroups: async () => memberGroups },
             };
-            const app = defineApp({ models: [model], auth });
+            const app = defineApp({ models: [model] });
 
             // Build AI tools
-            const tools = await buildAITools(app, {}, noopServerFns);
+            const tools = await buildAITools(app, {}, auth, noopServerFns);
 
             // For each operation, assert tool presence matches can() result
             const operations: AIOperation[] = ["list", "create", "update", "delete"];
@@ -97,7 +97,7 @@ describe("Property 8: AI tools respect permission boundaries", () => {
               const permissionKey = operation === "list" ? "read" : operation;
 
               // Compute expected result using can() directly
-              const expected = await can({}, `employee.${permissionKey}`, app);
+              const expected = await can({}, `employee.${permissionKey}`, auth, app);
 
               expect(toolPresent).toBe(expected);
             }
@@ -121,9 +121,9 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             const auth = {
               api: { getActiveMemberGroups: async () => memberGroups },
             };
-            const app = defineApp({ models: [model], auth });
+            const app = defineApp({ models: [model] });
 
-            const tools = await buildAITools(app, {}, noopServerFns);
+            const tools = await buildAITools(app, {}, auth, noopServerFns);
 
             expect(Object.keys(tools)).toContain("listEmployee");
             expect(Object.keys(tools)).toContain("createEmployee");
@@ -158,9 +158,9 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             const auth = {
               api: { getActiveMemberGroups: async () => ["NOMATCH_GROUP"] },
             };
-            const app = defineApp({ models: [model], auth });
+            const app = defineApp({ models: [model] });
 
-            const tools = await buildAITools(app, {}, noopServerFns);
+            const tools = await buildAITools(app, {}, auth, noopServerFns);
 
             expect(Object.keys(tools)).toHaveLength(0);
           },
@@ -182,9 +182,9 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             const auth = {
               api: { getActiveMemberGroups: async () => memberGroups },
             };
-            const app = defineApp({ models: [model], auth });
+            const app = defineApp({ models: [model] });
 
-            const tools = await buildAITools(app, {}, noopServerFns);
+            const tools = await buildAITools(app, {}, auth, noopServerFns);
 
             // Count how many operations are permitted
             const operations: AIOperation[] = ["list", "create", "update", "delete"];
@@ -192,7 +192,7 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             for (const op of operations) {
               // Map AI operation to permission key (list → read)
               const permissionKey = op === "list" ? "read" : op;
-              if (await can({}, `employee.${permissionKey}`, app)) {
+              if (await can({}, `employee.${permissionKey}`, auth, app)) {
                 permittedCount++;
               }
             }
@@ -225,9 +225,9 @@ describe("Property 8: AI tools respect permission boundaries", () => {
             const auth = {
               api: { getActiveMemberGroups: async () => [sharedGroup] },
             };
-            const app = defineApp({ models: [model], auth });
+            const app = defineApp({ models: [model] });
 
-            const tools = await buildAITools(app, {}, noopServerFns);
+            const tools = await buildAITools(app, {}, auth, noopServerFns);
 
             const toolName = `${operation}Employee`;
             expect(Object.keys(tools)).toContain(toolName);

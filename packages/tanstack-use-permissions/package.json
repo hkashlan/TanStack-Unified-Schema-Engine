@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@tanstack-use/core": "workspace:*"
+    "@tanstack-use/core": "workspace:*",
+    "drizzle-orm": "^0.45.2"
   }
 }

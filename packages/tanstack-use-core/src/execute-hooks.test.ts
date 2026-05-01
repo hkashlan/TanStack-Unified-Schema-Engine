@@ -1,8 +1,8 @@
+import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import { defineModel } from "./define-model.js";
 import { executeCreate, executeUpdate } from "./execute-hooks.js";
-import type { DrizzleDb } from "./execute-hooks.js";
 import type { BetterAuthSession } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -20,20 +20,26 @@ const mockSession = { user: { id: "u1" } } as unknown as BetterAuthSession;
 
 const mockRecord: UserRecord = { id: 1, name: "Alice" };
 
-/** Build a mock DB that returns the given rows from insert/update */
-function makeDb(returnedRows: unknown[] = [mockRecord]): DrizzleDb {
-  return {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(returnedRows),
-      }),
+/**
+ * Build a mock DB using drizzle.mock() and spy on insert/update so tests can
+ * assert call order and control returned rows.
+ */
+function makeDb(returnedRows: unknown[] = [mockRecord]) {
+  const db = drizzle.mock();
+
+  vi.spyOn(db, "insert").mockReturnValue({
+    values: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue(returnedRows),
     }),
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(returnedRows),
-      }),
+  } as ReturnType<typeof db.insert>);
+
+  vi.spyOn(db, "update").mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue(returnedRows),
     }),
-  };
+  } as ReturnType<typeof db.update>);
+
+  return db;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +65,6 @@ describe("executeCreate()", () => {
     await executeCreate(model, mockRecord, mockSession, db);
 
     expect(beforeCreate).toHaveBeenCalledWith({ record: mockRecord, session: mockSession });
-    // beforeCreate must be called before insert
     const beforeOrder = beforeCreate.mock.invocationCallOrder[0];
     const insertOrder = (db.insert as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
     expect(beforeOrder).toBeLessThan(insertOrder);
@@ -74,7 +79,6 @@ describe("executeCreate()", () => {
     await expect(executeCreate(model, mockRecord, mockSession, db)).rejects.toThrow(
       "validation failed",
     );
-    // DB insert must NOT have been called
     expect(db.insert).not.toHaveBeenCalled();
   });
 
@@ -87,7 +91,6 @@ describe("executeCreate()", () => {
     await executeCreate(model, mockRecord, mockSession, db);
 
     expect(afterCreate).toHaveBeenCalledWith({ record: persisted, session: mockSession });
-    // afterCreate must be called after insert
     const insertOrder = (db.insert as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
     const afterOrder = afterCreate.mock.invocationCallOrder[0];
     expect(afterOrder).toBeGreaterThan(insertOrder);
@@ -102,7 +105,6 @@ describe("executeCreate()", () => {
 
     const result = await executeCreate(model, mockRecord, mockSession, db);
 
-    // Should resolve (not reject) with the persisted record
     expect(result).toEqual(mockRecord);
     expect(consoleSpy).toHaveBeenCalledWith("afterCreate hook failed:", error);
 
@@ -111,18 +113,28 @@ describe("executeCreate()", () => {
 
   it("enforces execution order: beforeCreate → persist → afterCreate", async () => {
     const order: string[] = [];
-    const beforeCreate = vi.fn().mockImplementation(async () => { order.push("before"); });
-    const afterCreate = vi.fn().mockImplementation(async () => { order.push("after"); });
-    const db: DrizzleDb = {
-      insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockImplementation(async () => { order.push("persist"); return [mockRecord]; }),
+    const beforeCreate = vi.fn().mockImplementation(async () => {
+      order.push("before");
+    });
+    const afterCreate = vi.fn().mockImplementation(async () => {
+      order.push("after");
+    });
+
+    const db = drizzle.mock();
+    vi.spyOn(db, "insert").mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockImplementation(async () => {
+          order.push("persist");
+          return [mockRecord];
         }),
       }),
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([mockRecord]) }),
+    } as ReturnType<typeof db.insert>);
+    vi.spyOn(db, "update").mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([mockRecord]),
       }),
-    };
+    } as ReturnType<typeof db.update>);
+
     const model = defineModel(usersTable, { server: { beforeCreate, afterCreate } });
 
     await executeCreate(model, mockRecord, mockSession, db);
@@ -183,18 +195,28 @@ describe("executeUpdate()", () => {
 
   it("enforces execution order: beforeUpdate → persist → afterUpdate", async () => {
     const order: string[] = [];
-    const beforeUpdate = vi.fn().mockImplementation(async () => { order.push("before"); });
-    const afterUpdate = vi.fn().mockImplementation(async () => { order.push("after"); });
-    const db: DrizzleDb = {
-      insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([mockRecord]) }),
+    const beforeUpdate = vi.fn().mockImplementation(async () => {
+      order.push("before");
+    });
+    const afterUpdate = vi.fn().mockImplementation(async () => {
+      order.push("after");
+    });
+
+    const db = drizzle.mock();
+    vi.spyOn(db, "insert").mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([mockRecord]),
       }),
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          returning: vi.fn().mockImplementation(async () => { order.push("persist"); return [mockRecord]; }),
+    } as ReturnType<typeof db.insert>);
+    vi.spyOn(db, "update").mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        returning: vi.fn().mockImplementation(async () => {
+          order.push("persist");
+          return [mockRecord];
         }),
       }),
-    };
+    } as ReturnType<typeof db.update>);
+
     const model = defineModel(usersTable, { server: { beforeUpdate, afterUpdate } });
 
     await executeUpdate(model, mockRecord, mockSession, db);

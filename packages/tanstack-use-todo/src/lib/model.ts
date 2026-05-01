@@ -22,7 +22,7 @@ export const todoModel = defineModel(todosTable, {
     }
   },
   layout: {
-    list: ["title", "completed", "title2"],
+    list: ["title", "completed", "title1"],
     detail: [
       {
         label: "Details",
@@ -33,7 +33,7 @@ export const todoModel = defineModel(todosTable, {
   },
   server: {
     beforeCreate: async ({ record, session }) => {
-      (record as Record<string, unknown>).userId = session.userId;
+      record.userId = session.userId;
     },
   },
 });

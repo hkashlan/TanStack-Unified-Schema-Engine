@@ -15,15 +15,21 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
-import { AuthorizationError, can } from "../../tanstack-use-permissions/src/index.js";
+import { eq } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import {
-  type DrizzleDb,
   executeCreate,
   executeUpdate,
 } from "../../tanstack-use-core/src/execute-hooks.js";
-import type { App, BetterAuthSession } from "../../tanstack-use-core/src/types.js";
-import type { PgTable } from "drizzle-orm/pg-core";
-import { eq } from "drizzle-orm";
+import type {
+  App,
+  BetterAuthSession,
+  InferRecord,
+  Model,
+} from "../../tanstack-use-core/src/types.js";
+import { AuthorizationError, can } from "../../tanstack-use-permissions/src/index.js";
+import type { BetterAuthInstance } from "../../tanstack-use-permissions/src/permissions-adapter.js";
 
 // ---------------------------------------------------------------------------
 // Input types
@@ -64,21 +70,31 @@ export interface RemoveInput {
 }
 
 // ---------------------------------------------------------------------------
-// Helper — resolve the primary key column name for a Drizzle table
+// DbRow — a plain object with only serializable primitive values.
+// Drizzle always returns rows in this shape (strings, numbers, booleans,
+// Dates, null). Casting to this type satisfies TanStack Start's
+// ValidateSerializableMapped constraint without using `any`.
 // ---------------------------------------------------------------------------
 
-function getPrimaryKeyColumn(table: PgTable): string {
-  const cols = (table as unknown as Record<symbol, unknown>)[
-    Symbol.for("drizzle:Columns")
-  ] as Record<string, { primary?: boolean }> | undefined;
+type DbScalar = string | number | boolean | Date | null | undefined;
+export type DbRow = Record<string, DbScalar>;
+
+// ---------------------------------------------------------------------------
+// Helper — resolve the primary key column for a Drizzle table
+// ---------------------------------------------------------------------------
+
+function getPrimaryKeyColumn(model: Model<PgTable>): PgColumn {
+  // Drizzle stores column metadata under this well-known symbol key.
+  const drizzleColumns = Symbol.for("drizzle:Columns");
+  const cols = (model.table as unknown as Record<symbol, Record<string, PgColumn>>)[drizzleColumns];
 
   if (cols) {
-    for (const [key, col] of Object.entries(cols)) {
-      if (col.primary) return key;
+    for (const col of Object.values(cols)) {
+      if (col.primary) return col;
     }
   }
-  // Fallback: assume "id"
-  return "id";
+
+  throw new Error("Table has no primary key column");
 }
 
 // ---------------------------------------------------------------------------
@@ -91,44 +107,36 @@ function getPrimaryKeyColumn(table: PgTable): string {
  * Call this once at the application root and pass the result to
  * `<ServerFunctionsProvider fns={fns}>`.
  *
+ * @param app  - The App registry created by `defineApp`
+ * @param db   - A Drizzle NodePgDatabase instance
+ * @param auth - The permissions adapter created by `createPermissionsAdapter`
+ *
  * @example
  * ```typescript
  * // app.tsx
- * const fns = createServerFunctions(app, db);
+ * const auth = createPermissionsAdapter(db);
+ * const fns = createServerFunctions(app, db, auth);
  *
  * <ServerFunctionsProvider fns={fns}>
  *   <RouterProvider router={router} />
  * </ServerFunctionsProvider>
  * ```
  */
-export function createServerFunctions(app: App, db: DrizzleDb) {
+export function createServerFunctions(app: App, db: NodePgDatabase, auth: BetterAuthInstance) {
   // -------------------------------------------------------------------------
   // list — fetch records with optional search, sort, and pagination
   // -------------------------------------------------------------------------
 
   const list = createServerFn({ method: "GET" })
     .inputValidator((d: ListInput) => d)
-    .handler(async ({ data }) => {
+    .handler(async ({ data }): Promise<DbRow[]> => {
       const { tableName, page = 0, pageSize = 20 } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      const dbAny = db as unknown as {
-        select: () => {
-          from: (t: PgTable) => {
-            limit: (n: number) => { offset: (n: number) => Promise<unknown[]> };
-          };
-        };
-      };
-
-      const results = await dbAny
-        .select()
-        .from(model.table)
-        .limit(pageSize)
-        .offset(page * pageSize);
-
-      return results as any;
+      const rows = await db.select().from(model.table).limit(pageSize).offset(page * pageSize);
+      return rows as DbRow[];
     });
 
   // -------------------------------------------------------------------------
@@ -137,33 +145,18 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
 
   const get = createServerFn({ method: "GET" })
     .inputValidator((d: GetInput) => d)
-    .handler(async ({ data }) => {
+    .handler(async ({ data }): Promise<DbRow> => {
       const { tableName, id } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      const pkCol = getPrimaryKeyColumn(model.table);
-      const cols = (model.table as unknown as Record<symbol, unknown>)[
-        Symbol.for("drizzle:Columns")
-      ] as Record<string, unknown>;
-      const pkDrizzleCol = cols[pkCol];
+      const pkCol = getPrimaryKeyColumn(model);
+      const rows = await db.select().from(model.table).where(eq(pkCol, id));
 
-      const dbAny = db as unknown as {
-        select: () => {
-          from: (t: PgTable) => {
-            where: (cond: unknown) => Promise<unknown[]>;
-          };
-        };
-      };
-
-      const rows = await dbAny
-        .select()
-        .from(model.table)
-        .where(eq(pkDrizzleCol as Parameters<typeof eq>[0], id));
-
-      if (!rows[0]) throw new Error(`Record not found: ${tableName}/${id}`);
-      return rows[0] as any;
+      const row = rows[0];
+      if (!row) throw new Error(`Record not found: ${tableName}/${id}`);
+      return row as DbRow;
     });
 
   // -------------------------------------------------------------------------
@@ -172,21 +165,22 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
 
   const create = createServerFn({ method: "POST" })
     .inputValidator((d: CreateInput) => d)
-    .handler(async ({ data }) => {
+    .handler(async ({ data }): Promise<DbRow> => {
       const { tableName, record, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      const permitted = await can(session, `${tableName}.create`, app);
+      const permitted = await can(session, `${tableName}.create`, auth, app);
       if (!permitted) throw new AuthorizationError();
 
-      return executeCreate(
+      const result = await executeCreate(
         model,
-        record as Parameters<typeof executeCreate>[1],
+        record as InferRecord<typeof model.table>,
         session,
         db,
-      ) as any;
+      );
+      return result as DbRow;
     });
 
   // -------------------------------------------------------------------------
@@ -195,21 +189,22 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
 
   const update = createServerFn({ method: "POST" })
     .inputValidator((d: UpdateInput) => d)
-    .handler(async ({ data }) => {
+    .handler(async ({ data }): Promise<DbRow> => {
       const { tableName, record, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      const permitted = await can(session, `${tableName}.update`, app);
+      const permitted = await can(session, `${tableName}.update`, auth, app);
       if (!permitted) throw new AuthorizationError();
 
-      return executeUpdate(
+      const result = await executeUpdate(
         model,
-        record as Parameters<typeof executeUpdate>[1],
+        record as InferRecord<typeof model.table>,
         session,
         db,
-      ) as any;
+      );
+      return result as DbRow;
     });
 
   // -------------------------------------------------------------------------
@@ -218,28 +213,17 @@ export function createServerFunctions(app: App, db: DrizzleDb) {
 
   const remove = createServerFn({ method: "POST" })
     .inputValidator((d: RemoveInput) => d)
-    .handler(async ({ data }) => {
+    .handler(async ({ data }): Promise<void> => {
       const { tableName, id, session } = data;
 
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
 
-      const permitted = await can(session, `${tableName}.delete`, app);
+      const permitted = await can(session, `${tableName}.delete`, auth, app);
       if (!permitted) throw new AuthorizationError();
 
-      const pkCol = getPrimaryKeyColumn(model.table);
-      const cols = (model.table as unknown as Record<symbol, unknown>)[
-        Symbol.for("drizzle:Columns")
-      ] as Record<string, unknown>;
-      const pkDrizzleCol = cols[pkCol];
-
-      const dbAny = db as unknown as {
-        delete: (t: PgTable) => {
-          where: (cond: unknown) => Promise<void>;
-        };
-      };
-
-      await dbAny.delete(model.table).where(eq(pkDrizzleCol as Parameters<typeof eq>[0], id));
+      const pkCol = getPrimaryKeyColumn(model);
+      await db.delete(model.table).where(eq(pkCol, id));
     });
 
   return { list, get, create, update, remove };

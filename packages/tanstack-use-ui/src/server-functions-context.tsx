@@ -2,7 +2,7 @@
  * React context provider and hook for TanStack Start server functions.
  *
  * Usage:
- *   1. Call `createServerFunctions(app, db)` once at the application root.
+ *   1. Call `createServerFunctions(app, db, auth)` once at the application root.
  *   2. Wrap the app with `<ServerFunctionsProvider fns={fns}>`.
  *   3. In any generated page component, call `useServerFunctions()` to get
  *      the typed server functions.
@@ -42,7 +42,8 @@ export interface ServerFunctionsProviderProps {
  * Place this at the application root, wrapping `<RouterProvider>`:
  *
  * ```tsx
- * const fns = createServerFunctions(app, db);
+ * const auth = createPermissionsAdapter(db);
+ * const fns = createServerFunctions(app, db, auth);
  *
  * <ServerFunctionsProvider fns={fns}>
  *   <RouterProvider router={router} />

@@ -10,16 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TodosIndexRouteImport } from './routes/todos/index'
-import { Route as TodosNewRouteImport } from './routes/todos/new'
-import { Route as TodosIdRouteImport } from './routes/todos/$id'
 import { Route as DemoBetterAuthRouteImport } from './routes/demo/better-auth'
+import { Route as AuthenticatedTodosIndexRouteImport } from './routes/_authenticated/todos/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedTodosNewRouteImport } from './routes/_authenticated/todos/new'
+import { Route as AuthenticatedTodosIdRouteImport } from './routes/_authenticated/todos/$id'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -27,59 +32,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TodosIndexRoute = TodosIndexRouteImport.update({
-  id: '/todos/',
-  path: '/todos/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TodosNewRoute = TodosNewRouteImport.update({
-  id: '/todos/new',
-  path: '/todos/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TodosIdRoute = TodosIdRouteImport.update({
-  id: '/todos/$id',
-  path: '/todos/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoBetterAuthRoute = DemoBetterAuthRouteImport.update({
   id: '/demo/better-auth',
   path: '/demo/better-auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedTodosIndexRoute = AuthenticatedTodosIndexRouteImport.update({
+  id: '/todos/',
+  path: '/todos/',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTodosNewRoute = AuthenticatedTodosNewRouteImport.update({
+  id: '/todos/new',
+  path: '/todos/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTodosIdRoute = AuthenticatedTodosIdRouteImport.update({
+  id: '/todos/$id',
+  path: '/todos/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
-  '/todos/$id': typeof TodosIdRoute
-  '/todos/new': typeof TodosNewRoute
-  '/todos/': typeof TodosIndexRoute
+  '/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/todos/new': typeof AuthenticatedTodosNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
-  '/todos/$id': typeof TodosIdRoute
-  '/todos/new': typeof TodosNewRoute
-  '/todos': typeof TodosIndexRoute
+  '/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/todos/new': typeof AuthenticatedTodosNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/todos': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
-  '/todos/$id': typeof TodosIdRoute
-  '/todos/new': typeof TodosNewRoute
-  '/todos/': typeof TodosIndexRoute
+  '/_authenticated/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/_authenticated/todos/new': typeof AuthenticatedTodosNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,8 +95,8 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/todos/$id'
     | '/todos/new'
-    | '/todos/'
     | '/api/auth/$'
+    | '/todos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -98,26 +104,25 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/todos/$id'
     | '/todos/new'
-    | '/todos'
     | '/api/auth/$'
+    | '/todos'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/about'
     | '/demo/better-auth'
-    | '/todos/$id'
-    | '/todos/new'
-    | '/todos/'
+    | '/_authenticated/todos/$id'
+    | '/_authenticated/todos/new'
     | '/api/auth/$'
+    | '/_authenticated/todos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
   DemoBetterAuthRoute: typeof DemoBetterAuthRoute
-  TodosIdRoute: typeof TodosIdRoute
-  TodosNewRoute: typeof TodosNewRoute
-  TodosIndexRoute: typeof TodosIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -130,32 +135,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/todos/': {
-      id: '/todos/'
-      path: '/todos'
-      fullPath: '/todos/'
-      preLoaderRoute: typeof TodosIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/todos/new': {
-      id: '/todos/new'
-      path: '/todos/new'
-      fullPath: '/todos/new'
-      preLoaderRoute: typeof TodosNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/todos/$id': {
-      id: '/todos/$id'
-      path: '/todos/$id'
-      fullPath: '/todos/$id'
-      preLoaderRoute: typeof TodosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/better-auth': {
@@ -165,6 +156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoBetterAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/todos/': {
+      id: '/_authenticated/todos/'
+      path: '/todos'
+      fullPath: '/todos/'
+      preLoaderRoute: typeof AuthenticatedTodosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -172,16 +170,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/todos/new': {
+      id: '/_authenticated/todos/new'
+      path: '/todos/new'
+      fullPath: '/todos/new'
+      preLoaderRoute: typeof AuthenticatedTodosNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/todos/$id': {
+      id: '/_authenticated/todos/$id'
+      path: '/todos/$id'
+      fullPath: '/todos/$id'
+      preLoaderRoute: typeof AuthenticatedTodosIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedTodosIdRoute: typeof AuthenticatedTodosIdRoute
+  AuthenticatedTodosNewRoute: typeof AuthenticatedTodosNewRoute
+  AuthenticatedTodosIndexRoute: typeof AuthenticatedTodosIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedTodosIdRoute: AuthenticatedTodosIdRoute,
+  AuthenticatedTodosNewRoute: AuthenticatedTodosNewRoute,
+  AuthenticatedTodosIndexRoute: AuthenticatedTodosIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
   DemoBetterAuthRoute: DemoBetterAuthRoute,
-  TodosIdRoute: TodosIdRoute,
-  TodosNewRoute: TodosNewRoute,
-  TodosIndexRoute: TodosIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

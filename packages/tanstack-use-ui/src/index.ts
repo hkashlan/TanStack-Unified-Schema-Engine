@@ -28,3 +28,7 @@ export {
   ServerFunctionsContext,
 } from "./server-functions-context.js";
 export type { ServerFunctionsProviderProps } from "./server-functions-context.js";
+
+// Auth guard
+export { createAuthBeforeLoad } from "./auth-guard.js";
+export type { AuthBeforeLoadOptions } from "./auth-guard.js";
