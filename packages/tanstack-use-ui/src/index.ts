@@ -17,9 +17,10 @@ export type { DetailPageProps } from "./components/DetailPage.js";
 export { CreatePage, FieldInput, FileFieldInput } from "./components/CreatePage.js";
 export type { CreatePageProps } from "./components/CreatePage.js";
 
-// Server functions
-export { createServerFunctions } from "./server-functions.js";
-export type { ServerFunctions, ListInput, GetInput, CreateInput, UpdateInput, RemoveInput } from "./server-functions.js";
+// Server functions — types only in the barrel; the implementation is server-only.
+// Import createServerFunctions directly from "@tanstack-use/ui/src/server-functions.js"
+// inside a "use server" file — never from this barrel in client code.
+export type { ServerFunctions, ListInput, GetInput, CreateInput, UpdateInput, RemoveInput, DbRow } from "./server-functions.js";
 
 // Server functions context provider and hook
 export {
