@@ -14,10 +14,10 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "db:migrate": "tsx --env-file=.env npx drizzle-kit migrate",
+    "db:migrate": "npx drizzle-kit migrate",
     "db:generate": "tsx --env-file=.env npx drizzle-kit generate",
     "db:studio": "tsx --env-file=.env npx drizzle-kit studio",
-    "db:reset": "rm -rf drizzle &&  tsx --env-file=.env src/reset-db.ts",
+    "db:reset": "rm -rf drizzle &&  tsx --env-file=.env scripts/reset-db.ts",
     "auth:generate": "pnpm dlx auth generate"
   },
   "dependencies": {

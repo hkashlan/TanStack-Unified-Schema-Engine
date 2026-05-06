@@ -1,6 +1,5 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { Route as rootRouteImport } from "./routes/__root";
 import { createAuthRoute } from "@tanstack-use/permissions/server";
 
 // `auth` is imported lazily so the `pg` dependency is never statically
@@ -10,23 +9,26 @@ const getAuth = () =>
 
 
 export function getRouter() {
-  const authRoute = createAuthRoute(rootRouteImport, {
+  const authRoute = createAuthRoute(routeTree, {
     handler: async (req: Request) => {
       const auth = await getAuth();
       return auth.handler(req);
     },
   });
 
+  // Filter out the file-based version of the auth route to prevent the ID conflict
+  const existingChildren = (routeTree.children as unknown as [] || []).filter(
+    (child) => child['id'] !== '/api/auth/$'
+  );
 
-  let children = routeTree.children as unknown as Array<{path: string}>;
-  children = children.filter(child => child.path === authRoute.path)
-  
-  const finalRouteTree = routeTree.addChildren([...children as any, authRoute]);
-    const router = createTanStackRouter({
-    routeTree: finalRouteTree,
-    scrollRestoration: true,
-    defaultPreload: "intent",
-    defaultPreloadStaleTime: 0,
+  const finalTree = routeTree.addChildren([
+    ...existingChildren,
+    authRoute
+  ]);
+
+  const router = createTanStackRouter({
+    routeTree: finalTree,
+    // ... rest of config
   });
 
   return router;
