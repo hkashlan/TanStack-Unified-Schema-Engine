@@ -6,8 +6,7 @@
  *
  * The user is only created if the email doesn't already exist.
  */
-
-import { auth } from "./lib/auth.js";
+import { auth } from "@tanstack-use/permissions/server";
 
 const EMAIL = "admin@example.com";
 const PASSWORD = "password123";

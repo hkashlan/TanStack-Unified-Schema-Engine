@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoBetterAuthRouteImport } from './routes/demo/better-auth'
 import { Route as AuthenticatedTodosIndexRouteImport } from './routes/_authenticated/todos/index'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedTodosNewRouteImport } from './routes/_authenticated/todos/new'
 import { Route as AuthenticatedTodosIdRouteImport } from './routes/_authenticated/todos/$id'
 
@@ -42,11 +41,6 @@ const AuthenticatedTodosIndexRoute = AuthenticatedTodosIndexRouteImport.update({
   path: '/todos/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedTodosNewRoute = AuthenticatedTodosNewRouteImport.update({
   id: '/todos/new',
   path: '/todos/new',
@@ -64,7 +58,6 @@ export interface FileRoutesByFullPath {
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/todos/$id': typeof AuthenticatedTodosIdRoute
   '/todos/new': typeof AuthenticatedTodosNewRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesByTo {
@@ -73,7 +66,6 @@ export interface FileRoutesByTo {
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/todos/$id': typeof AuthenticatedTodosIdRoute
   '/todos/new': typeof AuthenticatedTodosNewRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/todos': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesById {
@@ -84,7 +76,6 @@ export interface FileRoutesById {
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/_authenticated/todos/$id': typeof AuthenticatedTodosIdRoute
   '/_authenticated/todos/new': typeof AuthenticatedTodosNewRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authenticated/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRouteTypes {
@@ -95,7 +86,6 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/todos/$id'
     | '/todos/new'
-    | '/api/auth/$'
     | '/todos/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -104,7 +94,6 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/todos/$id'
     | '/todos/new'
-    | '/api/auth/$'
     | '/todos'
   id:
     | '__root__'
@@ -114,7 +103,6 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/_authenticated/todos/$id'
     | '/_authenticated/todos/new'
-    | '/api/auth/$'
     | '/_authenticated/todos/'
   fileRoutesById: FileRoutesById
 }
@@ -123,7 +111,6 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
   DemoBetterAuthRoute: typeof DemoBetterAuthRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -163,13 +150,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodosIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/todos/new': {
       id: '/_authenticated/todos/new'
       path: '/todos/new'
@@ -208,7 +188,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
   DemoBetterAuthRoute: DemoBetterAuthRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

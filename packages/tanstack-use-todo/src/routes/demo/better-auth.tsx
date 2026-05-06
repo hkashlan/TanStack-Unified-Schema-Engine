@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { authClient } from "#/lib/auth-client";
 import { LoginForm } from "#/components/login-form";
+import { authClient } from "@tanstack-use/permissions";
 
 export const Route = createFileRoute("/demo/better-auth")({
   component: BetterAuthDemo,

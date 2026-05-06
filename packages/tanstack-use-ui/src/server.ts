@@ -4,9 +4,10 @@
  * Import from "@tanstack-use/ui/server" inside "use server" files only.
  * Never import this from client components — it pulls in drizzle-orm and pg.
  */
-export { createServerFunctions } from "./server-functions.js";
+export { createDb } from "../../tanstack-use-core/src/db.js";
+export { createModelServerFns } from "./server-functions.js";
 export type {
-  ServerFunctions,
+  ModelServerFns,
   ListInput,
   GetInput,
   CreateInput,

@@ -6,16 +6,8 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { ServerFunctionsProvider } from "@tanstack-use/ui";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import {
-  listRecords,
-  getRecord,
-  createRecord,
-  updateRecord,
-  removeRecord,
-} from "#/lib/server-functions";
 
 import appCss from "../styles.css?url";
 
@@ -63,17 +55,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
         <Header />
-        <ServerFunctionsProvider
-          fns={{
-            list: listRecords,
-            get: getRecord,
-            create: createRecord,
-            update: updateRecord,
-            remove: removeRecord,
-          }}
-        >
-          {children}
-        </ServerFunctionsProvider>
+        {children}
         <Footer />
         <TanStackDevtools
           config={{

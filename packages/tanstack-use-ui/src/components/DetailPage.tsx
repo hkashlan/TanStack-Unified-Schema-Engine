@@ -29,7 +29,7 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import { useServerFunctions } from "../server-functions-context.js";
+import type { ModelServerFns } from "../server-functions.js";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -58,6 +58,11 @@ export interface DetailPageProps<T extends PgTable> {
   model: Model<T>;
   /** The record ID to fetch */
   id: string | number;
+  /**
+   * Server functions scoped to this model — created via `createModelServerFns`
+   * at module level in the route file.
+   */
+  serverFns: ModelServerFns;
   /**
    * The current user session. Required for permission enforcement.
    * When absent, permission checks are skipped (open access assumed).
@@ -257,6 +262,7 @@ export function FieldDisplay<T extends PgTable>({
 export function DetailPage<T extends PgTable>({
   model,
   id,
+  serverFns,
   session,
   app,
   onUnauthorized,
@@ -321,7 +327,7 @@ export function DetailPage<T extends PgTable>({
   // Data fetching via TanStack Query → server function
   // -------------------------------------------------------------------------
 
-  const { get } = useServerFunctions();
+  const { get } = serverFns;
 
   const {
     data: record,

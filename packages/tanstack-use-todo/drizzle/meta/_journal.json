@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1777553620969,
-      "tag": "0000_kind_peter_quill",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777557627896,
-      "tag": "0001_public_radioactive_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777558105045,
-      "tag": "0002_dapper_legion",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777558348404,
-      "tag": "0003_busy_infant_terrible",
+      "when": 1777967523632,
+      "tag": "0000_lying_zarda",
       "breakpoints": true
     }
   ]

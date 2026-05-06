@@ -10,7 +10,7 @@
 
 import { eq } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { rolesTable, userRolesTable } from "./schema.js";
+import { rolesTable, userRolesTable } from "./schema/schema.js";
 
 /**
  * Minimal structural interface for the Better Auth instance.

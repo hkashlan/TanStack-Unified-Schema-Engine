@@ -35,7 +35,7 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import { useServerFunctions } from "../server-functions-context.js";
+import type { ModelServerFns } from "../server-functions.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,6 +44,11 @@ import { useServerFunctions } from "../server-functions-context.js";
 export interface ListPageProps<T extends PgTable> {
   /** The model whose list layout drives this page */
   model: Model<T>;
+  /**
+   * Server functions scoped to this model — created via `createModelServerFns`
+   * at module level in the route file.
+   */
+  serverFns: ModelServerFns;
   /**
    * The current user session. Required for permission enforcement.
    * When absent, permission checks are skipped (open access assumed).
@@ -173,6 +178,7 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
 
 function ListPageCore<T extends PgTable>({
   model,
+  serverFns,
   session,
   app,
   searchParams,
@@ -229,10 +235,10 @@ function ListPageCore<T extends PgTable>({
   }, [tableName, session, app, onUnauthorized]);
 
   // -------------------------------------------------------------------------
-  // Server functions via context
+  // Server functions via prop
   // -------------------------------------------------------------------------
 
-  const { list } = useServerFunctions();
+  const { list } = serverFns;
 
   // -------------------------------------------------------------------------
   // Search state — raw input value + debounced value sent to the query
