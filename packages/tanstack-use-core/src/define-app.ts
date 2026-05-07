@@ -1,13 +1,17 @@
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { App, Model } from "./types.js";
-
+import { tanForge } from "./app.js";
 export interface AppConfig {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   models: Model<any, any>[];
 }
 
+
+
+
 /**
- * Registers all models into a global App registry.
+ * Registers all models into a global App registry and stores the result on
+ * `tanstack.app` so it can be accessed from anywhere without prop-drilling.
  * Throws if two models share the same table name.
  */
 export function defineApp(config: AppConfig): App {
@@ -23,5 +27,11 @@ export function defineApp(config: AppConfig): App {
     models.set(name, model);
   }
 
-  return { _tag: "App", models };
+  const app: App = { _tag: "App", models };
+
+  // Register on the global tanstack namespace so any part of the framework
+  // can reach the app without needing it passed explicitly.
+  tanForge.app = app;
+
+  return app;
 }

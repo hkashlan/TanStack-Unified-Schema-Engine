@@ -33,7 +33,9 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server.functions.js";
+import { serverFns, type ModelServerFns } from "../server.functions.js";
+import { tanForge } from "@tanstack-use/core/app";
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,12 +43,7 @@ import type { ModelServerFns } from "../server.functions.js";
 
 export interface ListPageProps<T extends PgTable> {
   /** The model whose list layout drives this page */
-  model: Model<T>;
-  /**
-   * Server functions scoped to this model — created via `createModelServerFns`
-   * at module level in the route file.
-   */
-  serverFns: ModelServerFns;
+  tableName: string;
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
@@ -68,11 +65,7 @@ export interface ListPageProps<T extends PgTable> {
 // ---------------------------------------------------------------------------
 
 /** Extract the Drizzle table name from the Symbol-keyed property. */
-function getTableName(table: PgTable): string {
-  return (table as unknown as Record<symbol, unknown>)[
-    Symbol.for("drizzle:Name")
-  ] as string;
-}
+
 
 // ---------------------------------------------------------------------------
 // Router-aware sub-component
@@ -159,12 +152,15 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
 }
 
 function ListPageCore<T extends PgTable>({
-  model,
-  serverFns,
+  tableName,
   searchParams,
   onNavigate,
 }: ListPageCoreProps<T>): React.ReactElement {
-  const tableName = getTableName(model.table);
+  // const tableName = getTableName(model.table);
+  const model = tanForge.app.models.get(tableName)!;
+  if(!model) {
+    return <>not found</>
+  }
   const listFields = model.ui.layout?.list ?? [];
   const debounceMs = model.ui.layout?.listOptions?.searchDebounceMs ?? 300;
 

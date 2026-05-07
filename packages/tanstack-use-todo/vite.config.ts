@@ -7,7 +7,7 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
-const SERVER_ONLY_PACKAGES = ['pg', 'drizzle-orm', 'drizzle-orm/node-postgres', 'drizzle-orm/pg-core'];
+const SERVER_ONLY_PACKAGES = ['pg', 'pg-native', 'drizzle-orm', 'drizzle-orm/node-postgres', 'drizzle-orm/pg-core'];
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },

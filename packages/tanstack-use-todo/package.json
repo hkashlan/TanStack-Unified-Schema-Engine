@@ -9,7 +9,7 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
-    "seed": "tsx --env-file=.env src/seed.ts",
+    "seed": "tsx --env-file=.env scripts/seed.ts",
     "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",

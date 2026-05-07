@@ -1,5 +1,6 @@
 import type { Session, User } from "better-auth";
 import type { PgTable } from "drizzle-orm/pg-core";
+import {  type NodePgDatabase } from "drizzle-orm/node-postgres";
 
 /**
  * The session shape returned by `authClient.useSession().data`.
@@ -135,3 +136,4 @@ export interface App {
   _tag: "App";
   models: Map<string, Model<PgTable>>;
 }
+
