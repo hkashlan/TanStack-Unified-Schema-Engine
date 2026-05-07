@@ -29,7 +29,7 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server-functions.js";
+import type { ModelServerFns } from "../server.functions.js";
 
 // ---------------------------------------------------------------------------
 // File field detection

@@ -5,6 +5,10 @@
  * unauthenticated users to a configurable login path. Wire it into a TanStack
  * Router layout route that wraps all protected routes.
  *
+ * The session check is skipped on the server (SSR pass) and only runs in the
+ * browser, avoiding issues with auth clients that rely on cookies/fetch and
+ * cannot resolve a session during server-side rendering.
+ *
  * @example
  * ```ts
  * // src/routes/_authenticated.tsx
@@ -48,6 +52,9 @@ export interface AuthBeforeLoadOptions {
  * Handles both the better-auth `{ data: { user } }` response shape and plain
  * `{ user }` shapes so it works with any auth client.
  *
+ * The check is skipped during SSR — it only runs in the browser where the
+ * auth client can reliably read the session cookie.
+ *
  * Place this on a pathless layout route (e.g. `_authenticated`) and nest all
  * protected routes under it.
  */
@@ -60,6 +67,14 @@ export function createAuthBeforeLoad({
   }: {
     location: { href: string };
   }) {
+    // Skip the session check on the server. Auth clients (e.g. better-auth)
+    // rely on browser cookies and cannot reliably resolve a session during SSR.
+    // The check runs on the client after hydration, which is sufficient for
+    // protecting routes without causing false redirects.
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const result = await getSession();
 
     // Resolve the user from either shape:
@@ -74,8 +89,9 @@ export function createAuthBeforeLoad({
         to: loginPath,
         search: {
           // Preserve the intended destination so the login page can redirect
-          // back after a successful sign-in.
-          redirect: location.href,
+          // back after a successful sign-in. Strip the origin so the value is
+          // always a relative path (e.g. /todos/) regardless of environment.
+          redirect: location.href.replace(/^https?:\/\/[^/]+/, ""),
         },
       });
     }

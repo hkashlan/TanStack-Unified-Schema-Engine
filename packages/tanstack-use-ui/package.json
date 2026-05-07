@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tanstack-use/permissions": "workspace:*",
+    "@tanstack-use/core": "workspace:*",
     "@tanstack/pacer": "^0.21.0",
     "@tanstack/react-form": "^1.29.1",
     "@tanstack/react-query": "^5.100.6",

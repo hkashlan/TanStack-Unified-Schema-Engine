@@ -38,7 +38,7 @@ vi.mock("@tanstack/react-start", () => ({
 // Import after mock is set up
 // ---------------------------------------------------------------------------
 
-import { createServerFunctions } from "./server-functions.js";
+import { createServerFunctions } from "./server.functions.js";
 import {
   ServerFunctionsProvider,
   useServerFunctions,

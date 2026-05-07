@@ -14,7 +14,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import {
   type ColumnDef,
   type PaginationState,
@@ -25,17 +25,15 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { can } from "@tanstack-use/permissions";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
-  App,
   ComputedFieldDef,
   Model,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server-functions.js";
+import type { ModelServerFns } from "../server.functions.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,16 +48,6 @@ export interface ListPageProps<T extends PgTable> {
    */
   serverFns: ModelServerFns;
   /**
-   * The current user session. Required for permission enforcement.
-   * When absent, permission checks are skipped (open access assumed).
-   */
-  session?: unknown;
-  /**
-   * The App registry. Required for permission enforcement via `can()`.
-   * When absent, permission checks are skipped (open access assumed).
-   */
-  app?: App;
-  /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
    * Useful for testing without a full TanStack Router context.
@@ -73,12 +61,6 @@ export interface ListPageProps<T extends PgTable> {
   onNavigate?: (
     updater: (prev: Record<string, unknown>) => Record<string, unknown>,
   ) => void;
-  /**
-   * Optional override for the redirect function used when permission is denied.
-   * When provided, this is called instead of TanStack Router's `navigate`.
-   * Useful for testing without a full TanStack Router context.
-   */
-  onUnauthorized?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,66 +161,18 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
 function ListPageCore<T extends PgTable>({
   model,
   serverFns,
-  session,
-  app,
   searchParams,
   onNavigate,
-  onUnauthorized,
 }: ListPageCoreProps<T>): React.ReactElement {
   const tableName = getTableName(model.table);
   const listFields = model.ui.layout?.list ?? [];
   const debounceMs = model.ui.layout?.listOptions?.searchDebounceMs ?? 300;
 
   // -------------------------------------------------------------------------
-  // Permission guard (Requirement 5.4)
-  // -------------------------------------------------------------------------
-
-  const [authorized, setAuthorized] = useState<boolean | null>(
-    // Skip check when session/app are absent — treat as open access
-    session === undefined || app === undefined ? true : null,
-  );
-
-  const routerNavigate = useNavigate();
-
-  useEffect(() => {
-    if (session === undefined || app === undefined) return;
-
-    let cancelled = false;
-
-    async function checkPermission() {
-      if (!app || !session) return;
-      try {
-        const permitted = await can(session, `${tableName}.read`, app);
-        if (cancelled) return;
-        if (!permitted) {
-          if (onUnauthorized) {
-            onUnauthorized();
-          } else {
-            void (routerNavigate as (opts: { to: string }) => void)({
-              to: "/unauthorized",
-            });
-          }
-          setAuthorized(false);
-        } else {
-          setAuthorized(true);
-        }
-      } catch {
-        if (!cancelled) setAuthorized(false);
-      }
-    }
-
-    void checkPermission();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, app, onUnauthorized]);
-
-  // -------------------------------------------------------------------------
   // Server functions via prop
   // -------------------------------------------------------------------------
 
-  const { list } = serverFns;
+  const { list } = serverFns ?? {};
 
   // -------------------------------------------------------------------------
   // Search state — raw input value + debounced value sent to the query
@@ -327,8 +261,8 @@ function ListPageCore<T extends PgTable>({
       list({
         data: {
           tableName,
-          search: debouncedSearch || undefined,
-          sortBy: sorting[0]?.id,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(sorting[0]?.id ? { sortBy: sorting[0].id } : {}),
           sortDir: sorting[0]?.desc ? "desc" : "asc",
           page: pagination.pageIndex,
           pageSize: pagination.pageSize,
@@ -398,20 +332,6 @@ function ListPageCore<T extends PgTable>({
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
-
-  // Still resolving permission
-  if (authorized === null) {
-    return (
-      <div data-testid="list-page-loading-permission">
-        Checking permissions…
-      </div>
-    );
-  }
-
-  // Unauthorized — redirect is in progress; render nothing
-  if (!authorized) {
-    return <div data-testid="list-page-unauthorized" />;
-  }
 
   return (
     <div data-testid="list-page">

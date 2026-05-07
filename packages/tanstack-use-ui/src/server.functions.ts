@@ -24,9 +24,9 @@ import type {
   InferRecord,
   Model,
 } from "../../tanstack-use-core/src/types.js";
-import { AuthorizationError, can } from "../../tanstack-use-permissions/src/index.js";
+import { AuthorizationError, can } from "@tanstack-use/permissions";
 import { createPermissionsAdapter } from "../../tanstack-use-permissions/src/permissions-adapter.js";
-import { createDb } from "../../tanstack-use-core/src/db.js";
+import { createDb } from "@tanstack-use/core/db";
 
 // ---------------------------------------------------------------------------
 // Input / output types
@@ -101,13 +101,13 @@ function getPrimaryKeyColumn(model: Model<PgTable>): PgColumn {
  * @param app         - The App registry (for permission checks)
  * @param databaseUrl - PostgreSQL connection string
  */
-export function createModelServerFns(app: App, databaseUrl: string) {
-  const db = createDb(databaseUrl);
-  const auth = createPermissionsAdapter(db);
-
+export function createModelServerFns(app: App ) {
+  const databaseUrl: string =   process.env.DATABASE_URL!;
+  
   const list = createServerFn({ method: "GET" })
-    .inputValidator((d: ListInput) => d)
-    .handler(async ({ data }): Promise<DbRow[]> => {
+  .inputValidator((d: ListInput) => d)
+  .handler(async ({ data }): Promise<DbRow[]> => {
+      const db = createDb(databaseUrl);
       const { tableName, page = 0, pageSize = 20 } = data;
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
@@ -118,6 +118,7 @@ export function createModelServerFns(app: App, databaseUrl: string) {
   const get = createServerFn({ method: "GET" })
     .inputValidator((d: GetInput) => d)
     .handler(async ({ data }): Promise<DbRow> => {
+      const db = createDb(databaseUrl);
       const { tableName, id } = data;
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
@@ -131,6 +132,8 @@ export function createModelServerFns(app: App, databaseUrl: string) {
   const create = createServerFn({ method: "POST" })
     .inputValidator((d: CreateInput) => d)
     .handler(async ({ data }): Promise<DbRow> => {
+      const db = createDb(databaseUrl);
+  const auth = createPermissionsAdapter(db);
       const { tableName, record, session } = data;
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
@@ -148,6 +151,8 @@ export function createModelServerFns(app: App, databaseUrl: string) {
   const update = createServerFn({ method: "POST" })
     .inputValidator((d: UpdateInput) => d)
     .handler(async ({ data }): Promise<DbRow> => {
+      const db = createDb(databaseUrl);
+  const auth = createPermissionsAdapter(db);
       const { tableName, record, session } = data;
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);
@@ -165,6 +170,8 @@ export function createModelServerFns(app: App, databaseUrl: string) {
   const remove = createServerFn({ method: "POST" })
     .inputValidator((d: RemoveInput) => d)
     .handler(async ({ data }): Promise<void> => {
+      const db = createDb(databaseUrl);
+  const auth = createPermissionsAdapter(db);
       const { tableName, id, session } = data;
       const model = app.models.get(tableName);
       if (!model) throw new Error(`Unknown model: ${tableName}`);

@@ -54,8 +54,9 @@ export function LoginForm({
                 <Input
                   id="email"
                   type="email"
-                  value="admin@example.com"
+                  defaultValue="admin@example.com"
                   placeholder="m@example.com"
+                  autoComplete="email"
                   required
                 />
               </Field>
@@ -69,7 +70,7 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" value="password123" required />
+                <Input id="password" type="password" defaultValue="password123" autoComplete="current-password" required />
               </Field>
               {error && (
                 <Field>

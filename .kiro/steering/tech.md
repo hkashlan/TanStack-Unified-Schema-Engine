@@ -40,24 +40,29 @@
 
 ```bash
 # From workspace root
-npm test              # Run all tests once (vitest run)
-npm run test:watch    # Vitest in watch mode
-npm run typecheck     # tsc --noEmit across all packages
-npm run lint          # Biome lint
-npm run format        # Biome format (write)
-npm run check         # Biome check + fix (lint + format)
+pnpm test              # Run all tests once (vitest run)
+pnpm test:watch        # Vitest in watch mode
+pnpm typecheck         # tsc --noEmit across all packages
+pnpm lint              # Biome lint
+pnpm format            # Biome format (write)
+pnpm check             # Biome check + fix (lint + format)
 
-# From packages/tanstack-use-todo
-npm run dev           # Start dev server on port 3000
-npm run build         # Production build
-npm run seed          # Seed the database
-npm run test          # Run todo app tests
+# From packages/tanstack-use-todo (or use --filter)
+pnpm --filter @tanstack-use/todo dev     # Start dev server on port 3000
+pnpm --filter @tanstack-use/todo build   # Production build
+pnpm --filter @tanstack-use/todo seed    # Seed the database
+pnpm --filter @tanstack-use/todo test    # Run todo app tests
+
+# Installing dependencies
+pnpm add <pkg>                                  # Add to current package
+pnpm --filter @tanstack-use/todo add <pkg>      # Add to todo app specifically
 
 # Database migrations (from packages/tanstack-use-todo)
-npx drizzle-kit generate   # Generate migration files
-npx drizzle-kit migrate    # Apply migrations
+pnpm dlx drizzle-kit generate   # Generate migration files
+pnpm dlx drizzle-kit migrate    # Apply migrations
 ```
 
 ## Package Manager
-- `npm` with workspaces (root `package.json` manages the monorepo)
-- The todo app also has `pnpm` config for built dependencies (`esbuild`, `lightningcss`)
+- **`pnpm`** — used for all dependency management and script execution
+- Use `pnpm --filter <package-name>` to run commands in a specific workspace package
+- The todo app has `pnpm.onlyBuiltDependencies` config for native deps (`esbuild`, `lightningcss`)

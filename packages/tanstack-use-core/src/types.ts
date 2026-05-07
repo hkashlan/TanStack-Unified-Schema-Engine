@@ -1,8 +1,15 @@
-import type { Session } from "better-auth";
+import type { Session, User } from "better-auth";
 import type { PgTable } from "drizzle-orm/pg-core";
 
-/** Alias for the Better Auth session type */
-export type BetterAuthSession = Session;
+/**
+ * The session shape returned by `authClient.useSession().data`.
+ * This is NOT the DB session row — it's the client-side session object
+ * with both `session` and `user` properties.
+ */
+export type BetterAuthSession = {
+  session: Session;
+  user: User;
+};
 
 /** Infer the record type from a Drizzle PgTable */
 export type InferRecord<T extends PgTable> = T["$inferSelect"];

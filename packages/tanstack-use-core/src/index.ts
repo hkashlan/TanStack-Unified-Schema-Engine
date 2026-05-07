@@ -8,6 +8,7 @@ export { executeCreate, executeUpdate } from "./execute-hooks.js";
 export type {
   AllFieldKeys,
   App,
+  BetterAuthSession,
   ClientHooks,
   ComputedFieldDef,
   InferRecord,
