@@ -33,20 +33,17 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server.functions.js";
+import { serverFns } from "../server.functions.js";
+import { appClient } from "@tanstack-use/core/client";
+
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ListPageProps<T extends PgTable> {
+export interface ListPageProps {
   /** The model whose list layout drives this page */
-  model: Model<T>;
-  /**
-   * Server functions scoped to this model — created via `createModelServerFns`
-   * at module level in the route file.
-   */
-  serverFns: ModelServerFns;
+  tableName: string;
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
@@ -68,11 +65,7 @@ export interface ListPageProps<T extends PgTable> {
 // ---------------------------------------------------------------------------
 
 /** Extract the Drizzle table name from the Symbol-keyed property. */
-function getTableName(table: PgTable): string {
-  return (table as unknown as Record<symbol, unknown>)[
-    Symbol.for("drizzle:Name")
-  ] as string;
-}
+
 
 // ---------------------------------------------------------------------------
 // Router-aware sub-component
@@ -87,8 +80,8 @@ function getTableName(table: PgTable): string {
  * Reads sort/pagination state from the URL and passes it down to ListPageCore.
  * Only rendered when a TanStack Router context is available.
  */
-function RouterAwareListPage<T extends PgTable>(
-  props: Omit<ListPageProps<T>, "searchParams" | "onNavigate">,
+function RouterAwareListPage(
+  props: Omit<ListPageProps, "searchParams" | "onNavigate">,
 ): React.ReactElement {
   const routerSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const routerNavigate = useNavigate();
@@ -126,8 +119,8 @@ function RouterAwareListPage<T extends PgTable>(
  * Router search params. Pass `searchParams` and `onNavigate` props directly
  * when a router context is unavailable (e.g. in tests).
  */
-export function ListPage<T extends PgTable>(
-  props: ListPageProps<T>,
+export function ListPage(
+  props: ListPageProps,
 ): React.ReactElement {
   // When explicit overrides are provided (tests, Storybook, etc.) skip the
   // router hooks entirely — no context needed.
@@ -148,8 +141,8 @@ export function ListPage<T extends PgTable>(
 // Core implementation — receives searchParams and onNavigate as plain props
 // ---------------------------------------------------------------------------
 
-interface ListPageCoreProps<T extends PgTable> extends Omit<
-  ListPageProps<T>,
+interface ListPageCoreProps extends Omit<
+  ListPageProps,
   "searchParams" | "onNavigate"
 > {
   searchParams: Record<string, unknown>;
@@ -158,13 +151,16 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
   ) => void;
 }
 
-function ListPageCore<T extends PgTable>({
-  model,
-  serverFns,
+function ListPageCore({
+  tableName,
   searchParams,
   onNavigate,
-}: ListPageCoreProps<T>): React.ReactElement {
-  const tableName = getTableName(model.table);
+}: ListPageCoreProps): React.ReactElement {
+  // const tableName = getTableName(model.table);
+  const model = appClient.models.get(tableName)!;
+  if(!model) {
+    return <>not found</>
+  }
   const listFields = model.ui.layout?.list ?? [];
   const debounceMs = model.ui.layout?.listOptions?.searchDebounceMs ?? 300;
 
@@ -276,11 +272,11 @@ function ListPageCore<T extends PgTable>({
 
   const computedFields = (model.ui.computedFields ?? {}) as Record<
     string,
-    ComputedFieldDef<T>
+    ComputedFieldDef<PgTable>
   >;
   const uiFields = (model.ui.fields ?? {}) as Record<
     string,
-    UIFieldDef<T> | undefined
+    UIFieldDef<PgTable> | undefined
   >;
 
   const columns: ColumnDef<Record<string, unknown>>[] = listFields.map(

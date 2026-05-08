@@ -33,7 +33,7 @@ export const todoModel = defineModel(todosTable, {
   },
   server: {
     beforeCreate: async ({ record, session }) => {
-      if (!session.user?.id) {
+      if (!session?.user?.id) {
         throw new Error("User not authenticated");
       }
       record.userId = session.user.id;

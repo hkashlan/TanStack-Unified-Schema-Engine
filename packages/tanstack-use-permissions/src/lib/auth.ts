@@ -1,17 +1,28 @@
-import { createDb }  from "@tanstack-use/core/db";
-import { type Auth, betterAuth } from "better-auth";
-import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { admin, organization } from "better-auth/plugins";
+/**
+ * defineAuth — wraps `betterAuth` with the organization and
+ * tanstackStartCookies plugins always applied.
+ *
+ * This is the permissions-package entry point for creating a Better Auth
+ * instance. It ensures the required plugins are always present regardless
+ * of what extra options the caller provides.
+ */
+
+import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { organization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
-const db = createDb(process.env.DATABASE_URL!);
-
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg",
-  }),
-  emailAndPassword: {
-    enabled: true,
-  },
-  plugins: [organization(), admin(), tanstackStartCookies()],
-});
+/**
+ * Creates a Better Auth instance with the organization and
+ * tanstackStartCookies plugins always included.
+ *
+ * @param options - Standard Better Auth options (must include `database`)
+ */
+// The return type of betterAuth() references internal zod types that cannot
+// be named portably (TS2742). We use `unknown` as the return type and cast
+// at the call site to keep the public API stable.
+export function defineAuth(options: BetterAuthOptions): ReturnType<typeof betterAuth> {
+  return betterAuth({
+    ...options,
+    plugins: [organization(), tanstackStartCookies(), ...(options.plugins ?? [])],
+  });
+}

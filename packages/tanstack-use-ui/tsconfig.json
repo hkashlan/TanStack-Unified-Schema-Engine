@@ -1,9 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"]
   },
-  "include": ["src", "../tanstack-use-core/src/db.ts"]
+  "include": ["src", "../tanstack-use-core/src"]
 }

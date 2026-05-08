@@ -1,6 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { BetterAuthSession, InferRecord, Model } from "./types.js";
+import { Session } from "./server.js";
 
 /**
  * Executes the create lifecycle for a model:
@@ -11,13 +12,13 @@ import type { BetterAuthSession, InferRecord, Model } from "./types.js";
 export async function executeCreate<T extends PgTable>(
   model: Model<T>,
   record: InferRecord<T>,
-  session: BetterAuthSession,
   db: NodePgDatabase,
+  session: Session,
 ): Promise<InferRecord<T>> {
   const hooks = model.ui.server;
 
   if (hooks?.beforeCreate) {
-    await hooks.beforeCreate({ record, session });
+    await hooks.beforeCreate({ record, session: session });
   }
 
   const result = await db.insert(model.table).values(record).returning();
@@ -44,8 +45,8 @@ export async function executeCreate<T extends PgTable>(
 export async function executeUpdate<T extends PgTable>(
   model: Model<T>,
   record: InferRecord<T>,
-  session: BetterAuthSession,
   db: NodePgDatabase,
+  session: Session,
 ): Promise<InferRecord<T>> {
   const hooks = model.ui.server;
 

@@ -1,10 +1,10 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { createAuthBeforeLoad } from "@tanstack-use/ui";
-import { authClient } from "@tanstack-use/permissions";
+import { appClient } from "@tanstack-use/core/client";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: createAuthBeforeLoad({
-    getSession: () => authClient.getSession(),
+    getSession: () => appClient.auth.getSession(),
     loginPath: "/demo/better-auth",
   }),
   component: () => <Outlet />,

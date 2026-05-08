@@ -14,11 +14,11 @@
  * // src/routes/_authenticated.tsx
  * import { createFileRoute, Outlet } from "@tanstack/react-router";
  * import { createAuthBeforeLoad } from "@tanstack-use/ui";
- * import { authClient } from "#/lib/auth-client";
+ * import { appClient } from "@tanstack-use/core/client";
  *
  * export const Route = createFileRoute("/_authenticated")({
  *   beforeLoad: createAuthBeforeLoad({
- *     getSession: () => authClient.getSession(),
+ *     getSession: () => appClient.auth.getSession(),
  *     loginPath: "/demo/better-auth",
  *   }),
  *   component: () => <Outlet />,
@@ -87,12 +87,13 @@ export function createAuthBeforeLoad({
     if (!user) {
       throw redirect({
         to: loginPath,
-        search: {
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
           // Preserve the intended destination so the login page can redirect
           // back after a successful sign-in. Strip the origin so the value is
           // always a relative path (e.g. /todos/) regardless of environment.
           redirect: location.href.replace(/^https?:\/\/[^/]+/, ""),
-        },
+        }),
       });
     }
 

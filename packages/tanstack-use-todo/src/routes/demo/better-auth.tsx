@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { LoginForm } from "#/components/login-form";
-import { authClient } from "@tanstack-use/permissions";
+import { appClient } from "@tanstack-use/core/client";
 
 export const Route = createFileRoute("/demo/better-auth")({
   component: BetterAuthDemo,
 });
 
 function BetterAuthDemo() {
-  const { data: session } = authClient.useSession();
+  const { data: session } = appClient.auth.useSession();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -47,7 +47,7 @@ function BetterAuthDemo() {
 
           <button
             onClick={() => {
-              void authClient.signOut();
+              void appClient.auth.signOut();
             }}
             className="w-full h-9 px-4 text-sm font-medium border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
           >
@@ -75,7 +75,7 @@ function BetterAuthDemo() {
     setError("");
     setLoading(true);
     try {
-      const result = await authClient.signIn.email({ email, password });
+      const result = await appClient.auth.signIn.email({ email, password });
       if (result.error) {
         setError(result.error.message || "Sign in failed");
       }

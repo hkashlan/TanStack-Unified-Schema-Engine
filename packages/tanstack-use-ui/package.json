@@ -11,27 +11,27 @@
   "dependencies": {
     "@tanstack-use/permissions": "workspace:*",
     "@tanstack-use/core": "workspace:*",
-    "@tanstack/pacer": "^0.21.0",
-    "@tanstack/react-form": "^1.29.1",
-    "@tanstack/react-query": "^5.100.6",
-    "@tanstack/react-router": "^1.168.26",
-    "@tanstack/react-table": "^8.21.3",
-    "@tanstack/react-start": "^1.167.63",
-    "drizzle-orm": "^0.45.2",
-    "pg": "^8.13.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "@tanstack/pacer": "catalog:",
+    "@tanstack/react-form": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-table": "catalog:",
+    "@tanstack/react-start": "catalog:",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/pg": "^8.11.14",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "babel-plugin-react-compiler": "1.0.0",
-    "jsdom": "^29.1.0",
-    "vite": "^8.0.10"
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "jsdom": "catalog:",
+    "vite": "catalog:"
   }
 }

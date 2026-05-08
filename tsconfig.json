@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/tanstack-use-core" },
+    { "path": "packages/tanstack-use-permissions" },
+    { "path": "packages/tanstack-use-files" },
+    { "path": "packages/tanstack-use-ai" },
+    { "path": "packages/tanstack-use-ui" },
+    { "path": "packages/tanstack-use-todo" }
+  ]
+}

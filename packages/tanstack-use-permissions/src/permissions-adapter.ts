@@ -9,8 +9,8 @@
  */
 
 import { eq } from "drizzle-orm";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { rolesTable, userRolesTable } from "./schema/schema.js";
+import { rolesTable, userRolesTable } from "@tanstack-use/core/schema";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 /**
  * Minimal structural interface for the Better Auth instance.
@@ -29,7 +29,7 @@ export interface BetterAuthInstance {
  * The session shape is compatible with better-auth:
  *   `{ user: { id: string } }`
  */
-export function createPermissionsAdapter(db: PgDatabase<PgQueryResultHKT>): BetterAuthInstance {
+export function createPermissionsAdapter(db: NodePgDatabase): BetterAuthInstance {
   return {
     api: {
       getActiveMemberGroups: async (session: unknown): Promise<string[]> => {

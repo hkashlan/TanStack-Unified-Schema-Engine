@@ -1,5 +1,6 @@
-import type { App } from "@tanstack-use/core";
+import { appClient } from "@tanstack-use/core";
 import type { BetterAuthInstance } from "./permissions-adapter.js";
+import { Session } from "@tanstack-use/core/server";
 
 /**
  * Evaluates whether the session's member can perform an operation on a model.
@@ -11,16 +12,15 @@ import type { BetterAuthInstance } from "./permissions-adapter.js";
  * @returns true if the operation is permitted, false otherwise
  */
 export async function can(
-  session: unknown,
+  session: Session,
   target: string,
-  auth: BetterAuthInstance,
-  app: App,
+  auth?: BetterAuthInstance,
 ): Promise<boolean> {
   const dotIndex = target.indexOf(".");
   const modelName = dotIndex === -1 ? target : target.slice(0, dotIndex);
   const operation = dotIndex === -1 ? "" : target.slice(dotIndex + 1);
 
-  const model = app.models.get(modelName);
+  const model = appClient.models.get(modelName);
   if (model === undefined) {
     throw new Error(`Unknown model: ${modelName}`);
   }
@@ -33,7 +33,7 @@ export async function can(
     return true;
   }
 
-  const memberGroups: string[] = await auth.api.getActiveMemberGroups(session);
+  const memberGroups: string[] = await auth?.api?.getActiveMemberGroups(session) ?? [];
 
   return memberGroups.some((g) => allowedGroups.includes(g));
 }

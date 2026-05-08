@@ -7,5 +7,4 @@
 // export { auth } from "./lib/auth.js";
 export { createPermissionsAdapter } from "./permissions-adapter.js";
 export type { BetterAuthInstance } from "./permissions-adapter.js";
-export * from "./schema/schema.js";
 export { createAuthRoute } from "./create-auth-route.js";

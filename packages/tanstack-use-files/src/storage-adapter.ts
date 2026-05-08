@@ -9,6 +9,17 @@ export interface StorageAdapter {
 }
 
 /**
+ * Dynamic import helper for optional peer dependencies.
+ * Using a function wrapper avoids TypeScript's static module resolution
+ * for packages that are not installed at type-check time.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function dynamicImport(specifier: string): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  return new Function("s", "return import(s)")(specifier) as Promise<unknown>;
+}
+
+/**
  * Local filesystem adapter.
  * Writes files to `dir` (default: "uploads") and returns a relative path.
  */
@@ -42,7 +53,7 @@ export function s3(options: { bucket: string; region: string }): StorageAdapter 
 
   return {
     async store(file: File): Promise<string> {
-      const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+      const { S3Client, PutObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
       const client = new S3Client({ region });
       const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
       const key = ext ? `${randomUUID()}.${ext}` : randomUUID();
@@ -54,7 +65,7 @@ export function s3(options: { bucket: string; region: string }): StorageAdapter 
     },
 
     async delete(path: string): Promise<void> {
-      const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      const { S3Client, DeleteObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
       const client = new S3Client({ region });
       await client.send(
         new DeleteObjectCommand({ Bucket: bucket, Key: path }),
