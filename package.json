@@ -11,6 +11,11 @@
     "format": "biome format --write ./packages",
     "check": "biome check --write ./packages"
   },
+  "pnpm": {
+    "overrides": {
+      "@tanstack/react-router": "1.168.26"
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
     "@types/node": "^22.0.0",

@@ -26,9 +26,9 @@ describe("Property 4: Permission evaluation is correct for all group combination
           const auth = {
             api: { getActiveMemberGroups: async () => memberGroups },
           };
-          const app = defineApp({ models: [model], auth });
+          const app = defineApp({ models: [model] });
 
-          const result = await can(mockSession, "users.read", app);
+          const result = await can(mockSession, "users.read", auth, app);
 
           const expected =
             allowedGroups.length === 0 || memberGroups.some((g) => allowedGroups.includes(g));

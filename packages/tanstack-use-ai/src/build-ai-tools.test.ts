@@ -42,8 +42,8 @@ function makeServerFns(): AIServerFunctions {
   };
 }
 
-/** Build an App with configurable permissions and member groups. */
-function makeApp(
+/** Build an App and auth adapter with configurable permissions and member groups. */
+function makeAppAndAuth(
   permissions: {
     read?: string[];
     create?: string[];
@@ -56,7 +56,8 @@ function makeApp(
   const auth = {
     api: { getActiveMemberGroups: async () => memberGroups },
   };
-  return defineApp({ models: [model], auth });
+  const app = defineApp({ models: [model] });
+  return { app, auth };
 }
 
 // ---------------------------------------------------------------------------
@@ -65,10 +66,10 @@ function makeApp(
 
 describe("buildAITools() — tool presence", () => {
   it("generates all four tools when permissions are empty (open access)", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).toContain("listEmployee");
     expect(Object.keys(tools)).toContain("createEmployee");
@@ -77,31 +78,31 @@ describe("buildAITools() — tool presence", () => {
   });
 
   it("generates a createEmployee tool when session has create permission", async () => {
-    const app = makeApp({ create: ["admin"] }, ["admin"]);
+    const { app, auth } = makeAppAndAuth({ create: ["admin"] }, ["admin"]);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).toContain("createEmployee");
   });
 
   it("does NOT generate a createEmployee tool when session lacks create permission", async () => {
-    const app = makeApp({ create: ["admin"] }, ["viewer"]);
+    const { app, auth } = makeAppAndAuth({ create: ["admin"] }, ["viewer"]);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).not.toContain("createEmployee");
   });
 
   it("generates list tool but not create/update/delete when only read is permitted", async () => {
-    const app = makeApp(
+    const { app, auth } = makeAppAndAuth(
       { read: [], create: ["admin"], update: ["admin"], delete: ["admin"] },
       ["viewer"],
     );
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).toContain("listEmployee");
     expect(Object.keys(tools)).not.toContain("createEmployee");
@@ -110,13 +111,13 @@ describe("buildAITools() — tool presence", () => {
   });
 
   it("generates no tools when all operations are restricted and session has no groups", async () => {
-    const app = makeApp(
+    const { app, auth } = makeAppAndAuth(
       { read: ["admin"], create: ["admin"], update: ["admin"], delete: ["admin"] },
       [],
     );
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).toHaveLength(0);
   });
@@ -131,10 +132,10 @@ describe("buildAITools() — tool presence", () => {
     const auth = {
       api: { getActiveMemberGroups: async () => ["admin"] },
     };
-    const app = defineApp({ models: [employeeModel, projectModel], auth });
+    const app = defineApp({ models: [employeeModel, projectModel] });
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     // Employee: all permitted (admin has create, and read/update/delete are open)
     expect(Object.keys(tools)).toContain("listEmployee");
@@ -148,10 +149,10 @@ describe("buildAITools() — tool presence", () => {
 
   it("returns an empty object for an app with no models", async () => {
     const auth = { api: { getActiveMemberGroups: async () => [] } };
-    const app = defineApp({ models: [], auth });
+    const app = defineApp({ models: [] });
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     expect(Object.keys(tools)).toHaveLength(0);
   });
@@ -163,10 +164,10 @@ describe("buildAITools() — tool presence", () => {
 
 describe("buildAITools() — tool executors", () => {
   it("list tool executor calls serverFns.list with the correct tableName", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
     const listTool = tools["listEmployee"];
 
     expect(listTool).toBeDefined();
@@ -178,20 +179,20 @@ describe("buildAITools() — tool executors", () => {
   });
 
   it("list tool executor passes search term to serverFns.list", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
     await tools["listEmployee"].execute?.({ search: "Alice" });
 
     expect(serverFns.list).toHaveBeenCalledWith({ tableName: "employee", search: "Alice" });
   });
 
   it("create tool executor calls serverFns.create with tableName and record", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
     const record = { name: "Bob", department: "Design" };
     const result = await tools["createEmployee"].execute?.({ record });
 
@@ -200,10 +201,10 @@ describe("buildAITools() — tool executors", () => {
   });
 
   it("update tool executor calls serverFns.update with tableName, id, and record", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
     const record = { name: "Charlie" };
     await tools["updateEmployee"].execute?.({ id: 42, record });
 
@@ -215,10 +216,10 @@ describe("buildAITools() — tool executors", () => {
   });
 
   it("delete tool executor calls serverFns.remove with tableName and id", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
     const result = await tools["deleteEmployee"].execute?.({ id: 7 });
 
     expect(serverFns.remove).toHaveBeenCalledWith({ tableName: "employee", id: 7 });
@@ -232,10 +233,10 @@ describe("buildAITools() — tool executors", () => {
 
 describe("buildAITools() — tool metadata", () => {
   it("each tool has a name matching its key in the returned record", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     for (const [key, tool] of Object.entries(tools)) {
       expect(tool.name).toBe(key);
@@ -243,10 +244,10 @@ describe("buildAITools() — tool metadata", () => {
   });
 
   it("each tool has a non-empty description", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     for (const tool of Object.values(tools)) {
       expect(typeof tool.description).toBe("string");
@@ -255,10 +256,10 @@ describe("buildAITools() — tool metadata", () => {
   });
 
   it("each tool has an inputSchema", async () => {
-    const app = makeApp({}, []);
+    const { app, auth } = makeAppAndAuth({}, []);
     const serverFns = makeServerFns();
 
-    const tools = await buildAITools(app, {}, serverFns);
+    const tools = await buildAITools(app, {}, auth, serverFns);
 
     for (const tool of Object.values(tools)) {
       expect(tool.inputSchema).toBeDefined();

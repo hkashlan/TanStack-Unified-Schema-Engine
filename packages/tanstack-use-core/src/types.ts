@@ -1,19 +1,15 @@
-import type { Session } from "better-auth";
+import type { Session, User } from "better-auth";
 import type { PgTable } from "drizzle-orm/pg-core";
 
-/** Alias for the Better Auth session type */
-export type BetterAuthSession = Session;
-
 /**
- * Minimal structural interface for the Better Auth instance.
- * The framework only calls `auth.api.getActiveMemberGroups(session)` at
- * runtime — the full BetterAuth generic type is not needed here.
+ * The session shape returned by `authClient.useSession().data`.
+ * This is NOT the DB session row — it's the client-side session object
+ * with both `session` and `user` properties.
  */
-export interface BetterAuthInstance {
-  api: {
-    getActiveMemberGroups: (session: unknown) => Promise<string[]>;
-  };
-}
+export type BetterAuthSession = {
+  session: Session;
+  user: User;
+};
 
 /** Infer the record type from a Drizzle PgTable */
 export type InferRecord<T extends PgTable> = T["$inferSelect"];
@@ -121,11 +117,13 @@ export interface UIConfig<
    * });
    * ```
    */
-  fileFields?: Partial<Record<keyof T["_"]["columns"], { _config: { storage: unknown; fileAccess?: string[] } }>>;
+  fileFields?: Partial<
+    Record<keyof T["_"]["columns"], { _config: { storage: unknown; fileAccess?: string[] } }>
+  >;
 }
 
 export interface Model<
-  T extends PgTable,
+  T extends PgTable = PgTable,
   TComputed extends Record<string, ComputedFieldDef<T>> = Record<string, ComputedFieldDef<T>>,
 > {
   _tag: "Model";
@@ -136,5 +134,4 @@ export interface Model<
 export interface App {
   _tag: "App";
   models: Map<string, Model<PgTable>>;
-  auth: BetterAuthInstance;
 }

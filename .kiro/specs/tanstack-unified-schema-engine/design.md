@@ -356,7 +356,7 @@ beforeLoad: ({ context }) => {
 // packages/tanstack-use-ui/src/server-functions.ts
 "use server";
 
-import { createServerFn } from "@tanstack/start";
+import { createServerFn } from "@tanstack/react-start";
 import { can, AuthorizationError } from "@tanstack-use/permissions";
 import { executeCreate, executeUpdate, type DrizzleDb } from "@tanstack-use/core";
 import type { App } from "@tanstack-use/core";

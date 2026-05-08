@@ -2,7 +2,7 @@
  * buildAITools — derives TanStack AI tool definitions from the App registry.
  *
  * For each model and each operation (list, create, update, delete), the
- * function calls `can(session, target, app)` and registers a TanStack AI
+ * function calls `can(session, target, auth, app)` and registers a TanStack AI
  * `toolDefinition` only for permitted operations.
  *
  * Each tool's execute function calls the corresponding server function and
@@ -14,6 +14,7 @@
 import { toolDefinition } from "@tanstack/ai";
 import { z } from "zod";
 import { can } from "@tanstack-use/permissions";
+import type { BetterAuthInstance } from "@tanstack-use/permissions";
 import type { App } from "@tanstack-use/core";
 
 // ---------------------------------------------------------------------------
@@ -25,7 +26,7 @@ export type AIOperation = "list" | "create" | "update" | "delete";
 
 /**
  * Minimal interface for the server functions object produced by
- * `createServerFunctions(app, db)` from `@tanstack-use/ui`.
+ * `createServerFunctions(app, db, auth)` from `@tanstack-use/ui`.
  *
  * We accept a structural type here so that `tanstack-use-ai` does not need
  * to depend on `tanstack-use-ui` (which would create a circular dependency).
@@ -66,18 +67,20 @@ function capitalize(s: string): string {
  *
  * @param app        - The App registry produced by `defineApp()`
  * @param session    - The current Better Auth session
- * @param serverFns  - The server functions produced by `createServerFunctions(app, db)`
+ * @param auth       - The permissions adapter created by `createPermissionsAdapter()`
+ * @param serverFns  - The server functions produced by `createServerFunctions(app, db, auth)`
  * @returns          A record of TanStack AI tool definitions keyed by tool name
  *
  * @example
  * ```typescript
- * const tools = await buildAITools(app, session, serverFns);
+ * const tools = await buildAITools(app, session, auth, serverFns);
  * // tools may contain: listEmployee, createEmployee, updateEmployee, deleteEmployee
  * ```
  */
 export async function buildAITools(
   app: App,
   session: unknown,
+  auth: BetterAuthInstance,
   serverFns: AIServerFunctions,
 ): Promise<AITools> {
   const tools: AITools = {};
@@ -97,7 +100,7 @@ export async function buildAITools(
 
       let permitted: boolean;
       try {
-        permitted = await can(session, permissionTarget, app);
+        permitted = await can(session, permissionTarget, auth, app);
       } catch {
         // Unknown model or other error — skip this operation
         permitted = false;

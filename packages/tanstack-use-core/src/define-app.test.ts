@@ -13,12 +13,10 @@ const postsTable = pgTable("posts", {
   title: text("title").notNull(),
 });
 
-const mockAuth = { api: { getActiveMemberGroups: async () => [] } };
-
 describe("defineApp()", () => {
   it("registers models in the map keyed by table name", () => {
     const userModel = defineModel(usersTable, {});
-    const app = defineApp({ models: [userModel], auth: mockAuth });
+    const app = defineApp({ models: [userModel] });
 
     expect(app._tag).toBe("App");
     expect(app.models.has("users")).toBe(true);
@@ -28,7 +26,7 @@ describe("defineApp()", () => {
   it("registers multiple models keyed by their respective table names", () => {
     const userModel = defineModel(usersTable, {});
     const postModel = defineModel(postsTable, {});
-    const app = defineApp({ models: [userModel, postModel], auth: mockAuth });
+    const app = defineApp({ models: [userModel, postModel] });
 
     expect(app.models.size).toBe(2);
     expect(app.models.get("users")).toBe(userModel);
@@ -39,20 +37,13 @@ describe("defineApp()", () => {
     const model1 = defineModel(usersTable, {});
     const model2 = defineModel(usersTable, { fields: { name: { label: "Name" } } });
 
-    expect(() => defineApp({ models: [model1, model2], auth: mockAuth })).toThrow(
+    expect(() => defineApp({ models: [model1, model2] })).toThrow(
       "Duplicate model: users",
     );
   });
 
-  it("stores the auth instance as-is on the returned App", () => {
-    const userModel = defineModel(usersTable, {});
-    const app = defineApp({ models: [userModel], auth: mockAuth });
-
-    expect(app.auth).toBe(mockAuth);
-  });
-
   it("works with an empty models array", () => {
-    const app = defineApp({ models: [], auth: mockAuth });
+    const app = defineApp({ models: [] });
 
     expect(app._tag).toBe("App");
     expect(app.models.size).toBe(0);

@@ -1,15 +1,13 @@
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { App, BetterAuthInstance, Model } from "./types.js";
+import type { App, Model } from "./types.js";
 
 export interface AppConfig {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   models: Model<any, any>[];
-  // models: Model<PgTable>[];
-  auth: BetterAuthInstance;
 }
 
 /**
- * Registers all models and a Better Auth instance into a global App registry.
+ * Registers all models into a global App registry.
  * Throws if two models share the same table name.
  */
 export function defineApp(config: AppConfig): App {
@@ -25,5 +23,5 @@ export function defineApp(config: AppConfig): App {
     models.set(name, model);
   }
 
-  return { _tag: "App", models, auth: config.auth };
+  return { _tag: "App", models };
 }

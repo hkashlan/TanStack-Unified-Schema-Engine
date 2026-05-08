@@ -26,11 +26,12 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
   App,
+  BetterAuthSession,
   Model,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import { useServerFunctions } from "../server-functions-context.js";
+import type { ModelServerFns } from "../server.functions.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +40,11 @@ import { useServerFunctions } from "../server-functions-context.js";
 export interface CreatePageProps<T extends PgTable> {
   /** The model whose create layout drives this page */
   model: Model<T>;
+  /**
+   * Server functions scoped to this model — created via `createModelServerFns`
+   * at module level in the route file.
+   */
+  serverFns: ModelServerFns;
   /**
    * Called after a successful submission with the server response.
    * Useful for navigation (e.g. redirect to the detail page).
@@ -418,6 +424,7 @@ export function FieldInput<T extends PgTable>({
  */
 export function CreatePage<T extends PgTable>({
   model,
+  serverFns,
   onSuccess,
   confirmNavigation,
   session,
@@ -427,10 +434,10 @@ export function CreatePage<T extends PgTable>({
   const tableName = getTableName(model.table);
 
   // -------------------------------------------------------------------------
-  // Server functions via context
+  // Server functions via prop
   // -------------------------------------------------------------------------
 
-  const { create } = useServerFunctions();
+  const { create } = serverFns;
 
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
@@ -502,7 +509,7 @@ export function CreatePage<T extends PgTable>({
       }
 
       const created = (await create({
-        data: { tableName, record },
+        data: { tableName, record, session: session as BetterAuthSession },
       })) as Record<string, unknown>;
 
       onSuccess?.(created);
