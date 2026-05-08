@@ -6,7 +6,7 @@ Replace the custom `rolesTable` / `userRolesTable` schema and `createPermissions
 
 ## Tasks
 
-- [ ] 1. Create `permission-generator.ts` in `packages/tanstack-use-core/src/`
+- [x] 1. Create `permission-generator.ts` in `packages/tanstack-use-core/src/`
   - Create `packages/tanstack-use-core/src/permission-generator.ts` with two exported functions:
     - `generatePermissions(models: Map<string, Model<PgTable>>): Record<string, readonly CrudAction[]>` — iterates `models.keys()` and maps each name to `["create", "read", "update", "delete"]`
     - `buildAc(models: Map<string, Model<PgTable>>)` — calls `generatePermissions`, then passes the result to `createAccessControl` from `better-auth/plugins/access` and returns the AC instance

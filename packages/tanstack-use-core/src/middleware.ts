@@ -9,7 +9,7 @@ export const authMiddleware = createMiddleware().server(
     });
 
     if (!session) {
-      throw redirect({ to: "/login" });
+      throw redirect({ to: "/" });
     }
 
     return await next({

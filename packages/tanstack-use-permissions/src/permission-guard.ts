@@ -20,7 +20,7 @@ export async function can(
   const modelName = dotIndex === -1 ? target : target.slice(0, dotIndex);
   const operation = dotIndex === -1 ? "" : target.slice(dotIndex + 1);
 
-  const model = appClient.models.get(modelName);
+  const model = appClient.models[modelName as keyof typeof appClient.models];
   if (model === undefined) {
     throw new Error(`Unknown model: ${modelName}`);
   }

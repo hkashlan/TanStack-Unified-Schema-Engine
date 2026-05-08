@@ -34,7 +34,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core/client";
+import { appClient, getBaseApp } from "@tanstack-use/core/client";
 
 
 // ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ function ListPageCore({
   onNavigate,
 }: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-  const model = appClient.models.get(tableName)!;
+  const model = appClient.models[tableName]!;
   if(!model) {
     return <>not found</>
   }

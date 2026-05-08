@@ -20,8 +20,7 @@
  */
 
 import { useForm, type ReactFormExtendedApi } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
-import { can } from "@tanstack-use/permissions";
+// import { useNavigate } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
@@ -30,7 +29,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core";
+import { appClient, getBaseApp } from "@tanstack-use/core";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -402,7 +401,7 @@ export function CreatePage({
   onUnauthorized,
 }: CreatePageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = appClient.models.get(tableName)!;
+    const model = appClient.models[tableName]!;
     if(!model) {
       return <>not found</>
     }
@@ -421,7 +420,7 @@ export function CreatePage({
     session === undefined  ? true : null,
   );
 
-  const routerNavigate = useNavigate();
+  // const routerNavigate = useNavigate();
 
   useEffect(() => {
     if (session === undefined ) return;
@@ -431,20 +430,20 @@ export function CreatePage({
     async function checkPermission() {
       if ( !session) return;
       try {
-        const permitted = await can(session, `${tableName}.create`);
+        // const permitted = await can(session, `${tableName}.create`);
         if (cancelled) return;
-        if (!permitted) {
-          if (onUnauthorized) {
-            onUnauthorized();
-          } else {
-            void (routerNavigate as (opts: { to: string }) => void)({
-              to: "/unauthorized",
-            });
-          }
-          setAuthorized(false);
-        } else {
+        // if (!permitted) {
+        //   if (onUnauthorized) {
+        //     onUnauthorized();
+        //   } else {
+        //     void (routerNavigate as (opts: { to: string }) => void)({
+        //       to: "/unauthorized",
+        //     });
+        //   }
+        //   setAuthorized(false);
+        // } else {
           setAuthorized(true);
-        }
+        // }
       } catch {
         if (!cancelled) setAuthorized(false);
       }

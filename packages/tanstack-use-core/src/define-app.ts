@@ -1,36 +1,54 @@
-import type { PgTable } from "drizzle-orm/pg-core";
-import type { App, Model } from "./types.js";
+import type { Model, App } from "./types.js";
 import { appClient } from "./client.js";
 
-export interface AppConfig {
-  // biome-ignore lint/suspicious/noExplicitAny: models are heterogeneous by design
-  models: Model<any, any>[];
+export interface AppConfig<TModels extends Record<string, Model<any, any>>> {
+  models: TModels;
 }
 
 /**
- * Registers all models into the global `appClient` registry.
+ * Registers all models into the global `appClient` registry and returns a
+ * fully-typed `App<TModels>` instance.
  *
- * Call this once at app startup (e.g. in `src/lib/app.ts`). After this call,
- * `appClient.models` is populated and both client components and server
- * functions can look up models by table name.
+ * **For full type safety everywhere**, augment the `Register` interface after
+ * calling `defineApp`. This makes `appClient.models.yourModel` autocomplete
+ * throughout your entire app without needing to import the `app` export.
  *
- * Throws if two models share the same Drizzle table name.
+ * @example
+ * ```ts
+ * // src/router.tsx or src/lib/app.ts
+ * export const app = defineApp({ models: { todo: todoModel, post: postModel } });
+ *
+ * declare module "@tanstack-use/core" {
+ *   interface Register {
+ *     app: typeof app;
+ *   }
+ * }
+ *
+ * // Now everywhere in your app:
+ * import { appClient } from "@tanstack-use/core";
+ * appClient.models.todo  // ✓ autocompletes
+ * appClient.models.post  // ✓ autocompletes
+ * ```
+ *
+ * Throws if two models share the same key.
  */
-export function defineApp(config: AppConfig): App {
-  const models = new Map<string, Model<PgTable>>();
-
-  for (const model of config.models) {
-    const name = (model.table as unknown as Record<symbol, unknown>)[
-      Symbol.for("drizzle:Name")
-    ] as string;
-    if (models.has(name)) {
-      throw new Error(`Duplicate model: ${name}`);
+export function defineApp<TModels extends Record<string, Model<any, any>>>(
+  config: AppConfig<TModels>,
+): App<TModels> {
+  // Validate for duplicate keys (keys are already unique in a plain object,
+  // but we keep the check to catch accidental re-registrations at runtime).
+  const seen = new Set<string>();
+  for (const key of Object.keys(config.models)) {
+    if (seen.has(key)) {
+      throw new Error(`Duplicate model key: ${key}`);
     }
-    models.set(name, model);
+    seen.add(key);
   }
 
   // Mutate the shared singleton so all importers see the updated registry.
-  appClient.models = models;
+  // Cast to any to allow the mutation — at runtime it's the same object.
+  // The return type is correctly typed as App<TModels>.
+  (appClient as any).models = config.models;
 
-  return appClient;
+  return appClient as any as App<TModels>;
 }

@@ -81,7 +81,7 @@ export const list = createServerFn({ method: "GET" })
 
     const db = await appServer.db;
     const { tableName, page = 0, pageSize = 20 } = data;
-    const model = appServer.client.models.get(tableName);
+    const model = appServer.client.models[tableName];
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const rows = await db.select().from(model.table).limit(pageSize).offset(page * pageSize);
     return rows as DbRow[];
@@ -90,10 +90,10 @@ export const list = createServerFn({ method: "GET" })
 export const get = createServerFn({ method: "GET" })
   .inputValidator((d: GetInput) => d)
   .middleware([authMiddleware])
-  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+  .handler(async ({ data }): Promise<DbRow> => {
     const db = await appServer.db;
     const { tableName, id } = data;
-    const model = appServer.client.models.get(tableName);
+    const model = appServer.client.models[tableName];
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const pkCol = getPrimaryKeyColumn(model);
     const rows = await db.select().from(model.table).where(eq(pkCol, id));
@@ -108,7 +108,7 @@ export const create = createServerFn({ method: "POST" })
   .handler(async ({ data, context: { session } }): Promise<DbRow> => {
     const db = await appServer.db;
     const { tableName, record } = data;
-    const model = appServer.client.models.get(tableName);
+    const model = appServer.client.models[tableName];
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const permitted = await can(session, `${tableName}.create`);
     if (!permitted) throw new AuthorizationError();
@@ -127,15 +127,15 @@ export const update = createServerFn({ method: "POST" })
   .handler(async ({ data, context: { session } }): Promise<DbRow> => {
     const db = await appServer.db;
     const { tableName, record } = data;
-    const model = appServer.client.models.get(tableName);
+    const model = appServer.client.models[tableName];
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const permitted = await can(session, `${tableName}.update`);
     if (!permitted) throw new AuthorizationError();
     const result = await executeUpdate(
       model,
       record as InferRecord<typeof model.table>,
-      // session,
       db,
+      session,
     );
     return result as DbRow;
   });
@@ -146,7 +146,7 @@ export const remove = createServerFn({ method: "POST" })
   .handler(async ({ data, context: { session } }): Promise<void> => {
     const db = await appServer.db;
     const { tableName, id } = data;
-    const model = appServer.client.models.get(tableName);
+    const model = appServer.client.models[tableName];
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const permitted = await can(session, `${tableName}.delete`);
     if (!permitted) throw new AuthorizationError();
