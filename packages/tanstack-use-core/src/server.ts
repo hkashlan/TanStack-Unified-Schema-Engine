@@ -1,5 +1,5 @@
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
-import { appClient, getBaseApp } from "./client.js";
+import { appClient } from "./client.js";
 import { AuthInstance, createAuth } from "./auth.js";
 export * from "./schema/schema.js";
 

@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
-import type { App, RegisteredApp } from "./types.js";
+import type { PgTable } from "drizzle-orm/pg-core";
+import type { ComputedFieldDef, Model, RegisteredApp } from "./types.js";
 
 /**
  * Client-safe singleton.
@@ -35,5 +36,9 @@ export const appClient: RegisteredApp = {
   models: {},
   auth: createAuthClient(),
 } as RegisteredApp;
+
+export function getModel(tableName: string): Model<PgTable, Record<string, ComputedFieldDef<PgTable>>> | undefined {
+  return tableName in appClient.models ? (appClient.models[tableName as keyof typeof appClient.models] as Model<PgTable, Record<string, ComputedFieldDef<PgTable>>>) : undefined;
+}
 
 

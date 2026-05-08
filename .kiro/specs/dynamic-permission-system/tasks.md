@@ -15,18 +15,18 @@ Replace the custom `rolesTable` / `userRolesTable` schema and `createPermissions
   - Import `Model` type from `./types.js` and `PgTable` from `drizzle-orm/pg-core`
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 2. Export `generatePermissions` and `buildAc` from `packages/tanstack-use-core/src/index.ts`
+- [x] 2. Export `generatePermissions` and `buildAc` from `packages/tanstack-use-core/src/index.ts`
   - Add `export { generatePermissions, buildAc } from "./permission-generator.js";` to the public API barrel
   - _Requirements: 2.1, 2.4_
 
-- [ ] 3. Update `packages/tanstack-use-core/src/auth.ts` to use `buildAc` with dynamic access control
+- [X] 3. Update `packages/tanstack-use-core/src/auth.ts` to use `buildAc` with dynamic access control
   - Import `buildAc` from `./permission-generator.js`
   - Import `appClient` from `./client.js`
   - Inside `getAuthConfig`, replace the commented-out `organization()` call with `organization({ ac: buildAc(appClient.models), dynamicAccessControl: { enabled: true } })`
   - Keep `admin()` and `tanstackStartCookies()` plugins in place
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 4. Update `packages/tanstack-use-core/src/client.ts` to add `organizationClient` with dynamic access control
+- [-] 4. Update `packages/tanstack-use-core/src/client.ts` to add `organizationClient` with dynamic access control
   - Import `organizationClient` from `better-auth/client/plugins`
   - Pass `organizationClient({ dynamicAccessControl: { enabled: true } })` in the `plugins` array of `createAuthClient()`
   - _Requirements: 4.1, 4.2, 4.3_

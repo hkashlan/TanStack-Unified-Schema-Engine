@@ -29,7 +29,8 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient, getBaseApp } from "@tanstack-use/core";
+import { appClient } from "@tanstack-use/core";
+import { getModel } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -256,9 +257,9 @@ export function FileFieldInput({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFormInstance = ReactFormExtendedApi<any, any, any, any, any, any, any, any, any, any, any, any>;
 
-interface FieldInputProps<T extends PgTable> {
+interface FieldInputProps {
   fieldName: string;
-  model: Model<T>;
+  model: Model;
   form: AnyFormInstance;
   session?: unknown;
 }
@@ -281,7 +282,7 @@ export function FieldInput<T extends PgTable>({
   model,
   form,
   session,
-}: FieldInputProps<T>): React.ReactElement {
+}: FieldInputProps): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
   const uiFields = (model.ui.fields ?? {}) as Record<
     string,
@@ -401,7 +402,7 @@ export function CreatePage({
   onUnauthorized,
 }: CreatePageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = appClient.models[tableName]!;
+    const model = getModel(tableName);
     if(!model) {
       return <>not found</>
     }

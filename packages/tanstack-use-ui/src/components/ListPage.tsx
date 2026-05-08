@@ -34,7 +34,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient, getBaseApp } from "@tanstack-use/core/client";
+import { getModel } from "@tanstack-use/core/client";
 
 
 // ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ function ListPageCore({
   onNavigate,
 }: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-  const model = appClient.models[tableName]!;
+  const model = getModel(tableName);
   if(!model) {
     return <>not found</>
   }
@@ -280,7 +280,7 @@ function ListPageCore({
   >;
 
   const columns: ColumnDef<Record<string, unknown>>[] = listFields.map(
-    (col) => {
+    (col: unknown) => {
       const colKey = col as string;
       const cf = computedFields[colKey];
       const uiField = uiFields[colKey];
@@ -289,7 +289,7 @@ function ListPageCore({
         id: colKey,
         accessorKey: colKey,
         header: () => resolveLabel(colKey, model as unknown as Model<PgTable>),
-        cell: ({ row }) => {
+        cell: ({ row }: { row: { original: Record<string, unknown> } }) => {
           const record = row.original as Record<string, unknown>;
           if (cf !== undefined) {
             return cf.format

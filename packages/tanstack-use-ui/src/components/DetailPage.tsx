@@ -27,7 +27,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient, getBaseApp } from "@tanstack-use/core/client";
+import { appClient, getModel } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -237,7 +237,7 @@ export function DetailPage({
   onUnauthorized,
 }: DetailPageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = appClient.models[tableName]!;
+    const model = getModel(tableName);
     if(!model) {
       return <>not found</>
     }
