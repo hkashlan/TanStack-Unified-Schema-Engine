@@ -33,15 +33,15 @@ import type {
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import { serverFns, type ModelServerFns } from "../server.functions.js";
-import { tanForge } from "@tanstack-use/core/app";
+import { serverFns } from "../server.functions.js";
+import { appClient } from "@tanstack-use/core/client";
 
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ListPageProps<T extends PgTable> {
+export interface ListPageProps {
   /** The model whose list layout drives this page */
   tableName: string;
   /**
@@ -80,8 +80,8 @@ export interface ListPageProps<T extends PgTable> {
  * Reads sort/pagination state from the URL and passes it down to ListPageCore.
  * Only rendered when a TanStack Router context is available.
  */
-function RouterAwareListPage<T extends PgTable>(
-  props: Omit<ListPageProps<T>, "searchParams" | "onNavigate">,
+function RouterAwareListPage(
+  props: Omit<ListPageProps, "searchParams" | "onNavigate">,
 ): React.ReactElement {
   const routerSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const routerNavigate = useNavigate();
@@ -119,8 +119,8 @@ function RouterAwareListPage<T extends PgTable>(
  * Router search params. Pass `searchParams` and `onNavigate` props directly
  * when a router context is unavailable (e.g. in tests).
  */
-export function ListPage<T extends PgTable>(
-  props: ListPageProps<T>,
+export function ListPage(
+  props: ListPageProps,
 ): React.ReactElement {
   // When explicit overrides are provided (tests, Storybook, etc.) skip the
   // router hooks entirely — no context needed.
@@ -141,8 +141,8 @@ export function ListPage<T extends PgTable>(
 // Core implementation — receives searchParams and onNavigate as plain props
 // ---------------------------------------------------------------------------
 
-interface ListPageCoreProps<T extends PgTable> extends Omit<
-  ListPageProps<T>,
+interface ListPageCoreProps extends Omit<
+  ListPageProps,
   "searchParams" | "onNavigate"
 > {
   searchParams: Record<string, unknown>;
@@ -151,13 +151,13 @@ interface ListPageCoreProps<T extends PgTable> extends Omit<
   ) => void;
 }
 
-function ListPageCore<T extends PgTable>({
+function ListPageCore({
   tableName,
   searchParams,
   onNavigate,
-}: ListPageCoreProps<T>): React.ReactElement {
+}: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-  const model = tanForge.app.models.get(tableName)!;
+  const model = appClient.models.get(tableName)!;
   if(!model) {
     return <>not found</>
   }
@@ -272,11 +272,11 @@ function ListPageCore<T extends PgTable>({
 
   const computedFields = (model.ui.computedFields ?? {}) as Record<
     string,
-    ComputedFieldDef<T>
+    ComputedFieldDef<PgTable>
   >;
   const uiFields = (model.ui.fields ?? {}) as Record<
     string,
-    UIFieldDef<T> | undefined
+    UIFieldDef<PgTable> | undefined
   >;
 
   const columns: ColumnDef<Record<string, unknown>>[] = listFields.map(

@@ -10,13 +10,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
-    "./schema": "./src/schema/schema.ts",
-    "./auth": "./src/auth.ts"
+    "./schema": "./src/schema/schema.ts"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.6.9",
     "@tanstack-use/core": "workspace:*",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-router": ">=1.168.26"

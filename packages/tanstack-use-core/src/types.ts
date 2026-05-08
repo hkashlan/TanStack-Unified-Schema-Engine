@@ -1,9 +1,9 @@
 import type { Session, User } from "better-auth";
+import type { createAuthClient } from "better-auth/react";
 import type { PgTable } from "drizzle-orm/pg-core";
-import {  type NodePgDatabase } from "drizzle-orm/node-postgres";
 
 /**
- * The session shape returned by `authClient.useSession().data`.
+ * The session shape returned by `appClient.auth.useSession().data`.
  * This is NOT the DB session row — it's the client-side session object
  * with both `session` and `user` properties.
  */
@@ -84,10 +84,10 @@ export interface PermissionsDef {
 }
 
 export interface ServerHooks<T extends PgTable> {
-  beforeCreate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
-  afterCreate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
-  beforeUpdate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
-  afterUpdate?: (ctx: { record: InferRecord<T>; session: BetterAuthSession }) => Promise<void>;
+  beforeCreate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined }) => Promise<void>;
+  afterCreate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
+  beforeUpdate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
+  afterUpdate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
 }
 
 export interface ClientHooks<T extends PgTable> {
@@ -135,5 +135,6 @@ export interface Model<
 export interface App {
   _tag: "App";
   models: Map<string, Model<PgTable>>;
+  auth: ReturnType<typeof createAuthClient>;
 }
 

@@ -1,5 +1,5 @@
 import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
-export * from "@tanstack-use/permissions/schema";
+export * from "@tanstack-use/core/schema";
 
 export const todosTable = pgTable("todos", {
   id:        serial("id").primaryKey(),

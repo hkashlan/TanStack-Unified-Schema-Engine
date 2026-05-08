@@ -14,10 +14,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { executeCreate, executeUpdate } from "../../tanstack-use-core/src/execute-hooks.js";
-import type { BetterAuthSession, InferRecord, Model } from "../../tanstack-use-core/src/types.js";
+import type { InferRecord, Model } from "../../tanstack-use-core/src/types.js";
+import { appServer } from "@tanstack-use/core/server";
+import { authMiddleware } from "../../tanstack-use-core/src/middleware.js";
 import { AuthorizationError, can } from "@tanstack-use/permissions";
-import { createPermissionsAdapter } from "../../tanstack-use-permissions/src/permissions-adapter.js";
-import { tanForge } from "@tanstack-use/core/app";
 
 // ---------------------------------------------------------------------------
 // Input / output types
@@ -40,20 +40,17 @@ export interface GetInput {
 export interface CreateInput {
   tableName: string;
   record: Record<string, unknown>;
-  session: BetterAuthSession;
 }
 
 export interface UpdateInput {
   tableName: string;
   id: string | number;
   record: Record<string, unknown>;
-  session: BetterAuthSession;
 }
 
 export interface RemoveInput {
   tableName: string;
   id: string | number;
-  session: BetterAuthSession;
 }
 
 type DbScalar = string | number | boolean | Date | null | undefined;
@@ -81,9 +78,10 @@ function getPrimaryKeyColumn(model: Model<PgTable>): PgColumn {
 export const list = createServerFn({ method: "GET" })
   .inputValidator((d: ListInput) => d)
   .handler(async ({ data }): Promise<DbRow[]> => {
-    const db = await tanForge.getDb();
+
+    const db = await appServer.db;
     const { tableName, page = 0, pageSize = 20 } = data;
-    const model = tanForge.app.models.get(tableName);
+    const model = appServer.client.models.get(tableName);
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const rows = await db.select().from(model.table).limit(pageSize).offset(page * pageSize);
     return rows as DbRow[];
@@ -91,10 +89,11 @@ export const list = createServerFn({ method: "GET" })
 
 export const get = createServerFn({ method: "GET" })
   .inputValidator((d: GetInput) => d)
-  .handler(async ({ data }): Promise<DbRow> => {
-    const db = await tanForge.getDb();
+  .middleware([authMiddleware])
+  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+    const db = await appServer.db;
     const { tableName, id } = data;
-    const model = tanForge.app.models.get(tableName);
+    const model = appServer.client.models.get(tableName);
     if (!model) throw new Error(`Unknown model: ${tableName}`);
     const pkCol = getPrimaryKeyColumn(model);
     const rows = await db.select().from(model.table).where(eq(pkCol, id));
@@ -105,37 +104,37 @@ export const get = createServerFn({ method: "GET" })
 
 export const create = createServerFn({ method: "POST" })
   .inputValidator((d: CreateInput) => d)
-  .handler(async ({ data }): Promise<DbRow> => {
-    const db = await tanForge.getDb();
-    const { tableName, record, session } = data;
-    const model = tanForge.app.models.get(tableName);
+  .middleware([authMiddleware])
+  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+    const db = await appServer.db;
+    const { tableName, record } = data;
+    const model = appServer.client.models.get(tableName);
     if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const auth = createPermissionsAdapter(db);
-    const permitted = await can(session, `${tableName}.create`, auth, tanForge.app);
+    const permitted = await can(session, `${tableName}.create`);
     if (!permitted) throw new AuthorizationError();
     const result = await executeCreate(
       model,
       record as InferRecord<typeof model.table>,
-      session as BetterAuthSession,
       db,
+        session,
     );
     return result as DbRow;
   });
 
 export const update = createServerFn({ method: "POST" })
   .inputValidator((d: UpdateInput) => d)
-  .handler(async ({ data }): Promise<DbRow> => {
-    const db = await tanForge.getDb();
-    const { tableName, record, session } = data;
-    const model = tanForge.app.models.get(tableName);
+  .middleware([authMiddleware])
+  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+    const db = await appServer.db;
+    const { tableName, record } = data;
+    const model = appServer.client.models.get(tableName);
     if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const auth = createPermissionsAdapter(db);
-    const permitted = await can(session, `${tableName}.update`, auth, tanForge.app);
+    const permitted = await can(session, `${tableName}.update`);
     if (!permitted) throw new AuthorizationError();
     const result = await executeUpdate(
       model,
       record as InferRecord<typeof model.table>,
-      session as BetterAuthSession,
+      // session,
       db,
     );
     return result as DbRow;
@@ -143,13 +142,13 @@ export const update = createServerFn({ method: "POST" })
 
 export const remove = createServerFn({ method: "POST" })
   .inputValidator((d: RemoveInput) => d)
-  .handler(async ({ data }): Promise<void> => {
-    const db = await tanForge.getDb();
-    const { tableName, id, session } = data;
-    const model = tanForge.app.models.get(tableName);
+  .middleware([authMiddleware])
+  .handler(async ({ data, context: { session } }): Promise<void> => {
+    const db = await appServer.db;
+    const { tableName, id } = data;
+    const model = appServer.client.models.get(tableName);
     if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const auth = createPermissionsAdapter(db);
-    const permitted = await can(session, `${tableName}.delete`, auth, tanForge.app);
+    const permitted = await can(session, `${tableName}.delete`);
     if (!permitted) throw new AuthorizationError();
     const pkCol = getPrimaryKeyColumn(model);
     await db.delete(model.table).where(eq(pkCol, id));

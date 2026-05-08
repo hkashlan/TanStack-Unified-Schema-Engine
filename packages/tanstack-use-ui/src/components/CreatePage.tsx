@@ -19,32 +19,26 @@
  * The React Compiler handles all memoization automatically.
  */
 
-import { useForm } from "@tanstack/react-form";
+import { useForm, type ReactFormExtendedApi } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { can } from "@tanstack-use/permissions";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
-  App,
-  BetterAuthSession,
   Model,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server.functions.js";
+import { serverFns } from "../server.functions.js";
+import { appClient } from "@tanstack-use/core";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface CreatePageProps<T extends PgTable> {
+export interface CreatePageProps {
   /** The model whose create layout drives this page */
-  model: Model<T>;
-  /**
-   * Server functions scoped to this model — created via `createModelServerFns`
-   * at module level in the route file.
-   */
-  serverFns: ModelServerFns;
+  tableName: string;
   /**
    * Called after a successful submission with the server response.
    * Useful for navigation (e.g. redirect to the detail page).
@@ -59,32 +53,11 @@ export interface CreatePageProps<T extends PgTable> {
    */
   confirmNavigation?: () => boolean;
   /**
-   * The current user session. Required for permission enforcement and file
-   * field access checks. When absent, permission checks are skipped.
-   */
-  session?: unknown;
-  /**
-   * The App registry. Required for permission enforcement via `can()` and
-   * file field access checks. When absent, permission checks are skipped.
-   */
-  app?: App;
-  /**
    * Optional override for the redirect function used when permission is denied.
    * When provided, this is called instead of TanStack Router's `navigate`.
    * Useful for testing without a full TanStack Router context.
    */
   onUnauthorized?: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Extract the Drizzle table name from the Symbol-keyed property. */
-function getTableName(table: PgTable): string {
-  return (table as unknown as Record<symbol, unknown>)[
-    Symbol.for("drizzle:Name")
-  ] as string;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +98,6 @@ interface FileFieldInputProps {
   /** The FileModelColumn object from model.ui.fileFields — used for upload operations */
   fileModelColumn: { _config: { storage: unknown; fileAccess?: string[] } };
   session: unknown;
-  app: App | undefined;
   onUpload: (path: string) => void;
 }
 
@@ -143,18 +115,17 @@ export function FileFieldInput({
   fieldName,
   currentPath,
   fileAccess,
-  fileModelColumn,
+  fileModelColumn: _fileModelColumn,
   session,
-  app,
-  onUpload,
+  onUpload: _onUpload,
 }: FileFieldInputProps): React.ReactElement {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, _setUploading] = useState(false);
+  const [uploadError, _setUploadError] = useState<string | null>(null);
 
   // Resolve upload access asynchronously
   useEffect(() => {
-    if (!app || !session) {
+    if ( !session) {
       // No app/session — treat as no access (read-only)
       setHasAccess(fileAccess.length === 0);
       return;
@@ -163,15 +134,15 @@ export function FileFieldInput({
     let cancelled = false;
 
     async function checkAccess() {
-      if (!app) return;
       try {
         if (fileAccess.length === 0) {
           if (!cancelled) setHasAccess(true);
           return;
         }
-        const memberGroups = await app.auth.api.getActiveMemberGroups(session);
-        const permitted = memberGroups.some((g) => fileAccess.includes(g));
-        if (!cancelled) setHasAccess(permitted);
+        // todo hadi
+        // const memberGroups = await app.auth.api.getActiveMemberGroups(session);
+        // const permitted = memberGroups.some((g) => fileAccess.includes(g));
+        // if (!cancelled) setHasAccess(permitted);
       } catch {
         if (!cancelled) setHasAccess(false);
       }
@@ -181,36 +152,36 @@ export function FileFieldInput({
     return () => {
       cancelled = true;
     };
-  }, [app, session, fileAccess]);
+  }, [session, fileAccess]);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = (e.nativeEvent.target as unknown as HTMLInputElement).files;
-    const file = files?.[0];
-    if (!file || !app) return;
+  async function handleFileChange(_e: React.ChangeEvent<HTMLInputElement>) {
+    // const files = (e.nativeEvent.target as unknown as HTMLInputElement).files;
+    // const file = files?.[0];
+    // if (!file || !app) return;
 
-    setUploading(true);
-    setUploadError(null);
+    // setUploading(true);
+    // setUploadError(null);
 
-    try {
-      const { handleUpload } =
-        await import("../../../tanstack-use-files/src/file-handler.js");
+    // try {
+    //   const { handleUpload } =
+    //     await import("../../../tanstack-use-files/src/file-handler.js");
 
-      const path = await handleUpload(
-        {
-          session,
-          fileModelColumn: fileModelColumn as unknown as Parameters<
-            typeof handleUpload
-          >[0]["fileModelColumn"],
-          file,
-        },
-        app,
-      );
-      onUpload(path);
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
+    //   const path = await handleUpload(
+    //     {
+    //       session,
+    //       fileModelColumn: fileModelColumn as unknown as Parameters<
+    //         typeof handleUpload
+    //       >[0]["fileModelColumn"],
+    //       file,
+    //     },
+    //     app,
+    //   );
+    //   onUpload(path);
+    // } catch (err) {
+    //   setUploadError(err instanceof Error ? err.message : "Upload failed");
+    // } finally {
+    //   setUploading(false);
+    // }
   }
 
   // Still resolving access
@@ -280,13 +251,17 @@ export function FileFieldInput({
 // FieldInput — renders a single form field with label, input, and error
 // ---------------------------------------------------------------------------
 
+// Convenience alias for the form instance type used throughout this file.
+// Uses `any` for all type parameters to accept any form instance regardless
+// of its validator configuration.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFormInstance = ReactFormExtendedApi<any, any, any, any, any, any, any, any, any, any, any, any>;
+
 interface FieldInputProps<T extends PgTable> {
   fieldName: string;
   model: Model<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: ReturnType<typeof useForm<any>>;
+  form: AnyFormInstance;
   session?: unknown;
-  app?: App | undefined;
 }
 
 /**
@@ -307,7 +282,6 @@ export function FieldInput<T extends PgTable>({
   model,
   form,
   session,
-  app,
 }: FieldInputProps<T>): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
   const uiFields = (model.ui.fields ?? {}) as Record<
@@ -325,16 +299,16 @@ export function FieldInput<T extends PgTable>({
   return (
     <form.Field
       name={fieldName}
-      validators={
-        validate
-          ? {
+      {...(validate
+        ? {
+            validators: {
               onChange: ({ value }: { value: unknown }) =>
                 validate(value) ?? null,
               onBlur: ({ value }: { value: unknown }) =>
                 validate(value) ?? null,
-            }
-          : undefined
-      }
+            },
+          }
+        : {})}
     >
       {(field) => (
         <div
@@ -354,9 +328,8 @@ export function FieldInput<T extends PgTable>({
               fieldName={fieldName}
               currentPath={String(field.state.value ?? "")}
               fileAccess={fileConfig.fileAccess ?? []}
-              fileModelColumn={fileConfig}
+              fileModelColumn={{ _config: fileConfig }}
               session={session}
-              app={app}
               onUpload={(path) => field.handleChange(path)}
             />
           ) : (
@@ -422,16 +395,17 @@ export function FieldInput<T extends PgTable>({
  * (Requirement 12.6). The `confirmNavigation` prop can override the confirm
  * dialog for testing.
  */
-export function CreatePage<T extends PgTable>({
-  model,
-  serverFns,
+export function CreatePage({
+  tableName,
   onSuccess,
   confirmNavigation,
-  session,
-  app,
   onUnauthorized,
-}: CreatePageProps<T>): React.ReactElement {
-  const tableName = getTableName(model.table);
+}: CreatePageProps): React.ReactElement {
+  // const tableName = getTableName(model.table);
+    const model = appClient.models.get(tableName)!;
+    if(!model) {
+      return <>not found</>
+    }
 
   // -------------------------------------------------------------------------
   // Server functions via prop
@@ -442,22 +416,22 @@ export function CreatePage<T extends PgTable>({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-
+    const session = appClient.auth.getSession();
   const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined || app === undefined ? true : null,
+    session === undefined  ? true : null,
   );
 
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    if (session === undefined || app === undefined) return;
+    if (session === undefined ) return;
 
     let cancelled = false;
 
     async function checkPermission() {
-      if (!app || !session) return;
+      if ( !session) return;
       try {
-        const permitted = await can(session, `${tableName}.create`, app);
+        const permitted = await can(session, `${tableName}.create`);
         if (cancelled) return;
         if (!permitted) {
           if (onUnauthorized) {
@@ -481,7 +455,7 @@ export function CreatePage<T extends PgTable>({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, app, onUnauthorized]);
+  }, [tableName, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Determine which fields to render — exclude computed field keys (Req 3.2)
@@ -496,7 +470,7 @@ export function CreatePage<T extends PgTable>({
   // TanStack Form instance
   // -------------------------------------------------------------------------
 
-  const form = useForm<Record<string, unknown>>({
+  const form = useForm({
     defaultValues: Object.fromEntries(createFields.map((f) => [f, ""])),
     onSubmit: async ({ value }) => {
       let record: Record<string, unknown> = value;
@@ -509,7 +483,7 @@ export function CreatePage<T extends PgTable>({
       }
 
       const created = (await create({
-        data: { tableName, record, session: session as BetterAuthSession },
+        data: { tableName, record  },
       })) as Record<string, unknown>;
 
       onSuccess?.(created);
@@ -608,9 +582,8 @@ export function CreatePage<T extends PgTable>({
             key={fieldName}
             fieldName={fieldName}
             model={model}
-            form={form}
+            form={form as AnyFormInstance}
             session={session}
-            app={app}
           />
         ))}
 

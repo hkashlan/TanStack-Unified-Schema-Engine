@@ -22,14 +22,13 @@ import { can } from "@tanstack-use/permissions";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useState } from "react";
 import type {
-  App,
   ComputedFieldDef,
   Model,
-  TabDef,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
-import type { ModelServerFns } from "../server.functions.js";
+import { serverFns } from "../server.functions.js";
+import { appClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -53,43 +52,17 @@ function isFileField(fieldName: string, model: Model<PgTable>): boolean {
 // Types
 // ---------------------------------------------------------------------------
 
-export interface DetailPageProps<T extends PgTable> {
+export interface DetailPageProps {
   /** The model whose detail layout drives this page */
-  model: Model<T>;
+  tableName: string;
   /** The record ID to fetch */
   id: string | number;
-  /**
-   * Server functions scoped to this model — created via `createModelServerFns`
-   * at module level in the route file.
-   */
-  serverFns: ModelServerFns;
-  /**
-   * The current user session. Required for permission enforcement.
-   * When absent, permission checks are skipped (open access assumed).
-   */
-  session?: unknown;
-  /**
-   * The App registry. Required for permission enforcement via `can()`.
-   * When absent, permission checks are skipped (open access assumed).
-   */
-  app?: App;
   /**
    * Optional override for the redirect function used when permission is denied.
    * When provided, this is called instead of TanStack Router's `navigate`.
    * Useful for testing without a full TanStack Router context.
    */
   onUnauthorized?: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Extract the Drizzle table name from the Symbol-keyed property. */
-function getTableName(table: PgTable): string {
-  return (table as unknown as Record<symbol, unknown>)[
-    Symbol.for("drizzle:Name")
-  ] as string;
 }
 
 // ---------------------------------------------------------------------------
@@ -259,19 +232,18 @@ export function FieldDisplay<T extends PgTable>({
  *
  * Loading and error states are shown while the record is being fetched.
  */
-export function DetailPage<T extends PgTable>({
-  model,
+export function DetailPage({
+  tableName,
   id,
-  serverFns,
-  session,
-  app,
   onUnauthorized,
-}: DetailPageProps<T>): React.ReactElement {
-  const tableName = getTableName(model.table);
-  const tabs = (model.ui.layout?.detail ?? []) as TabDef<
-    T,
-    Record<string, ComputedFieldDef<T>>
-  >[];
+}: DetailPageProps): React.ReactElement {
+  // const tableName = getTableName(model.table);
+    const model = appClient.models.get(tableName)!;
+    if(!model) {
+      return <>not found</>
+    }
+  
+  const tabs = (model.ui.layout?.detail ?? []);
 
   // -------------------------------------------------------------------------
   // Active tab state
@@ -282,22 +254,23 @@ export function DetailPage<T extends PgTable>({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
+    const session = appClient.auth.getSession();
 
   const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined || app === undefined ? true : null,
+    session === undefined  ? true : null,
   );
 
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    if (session === undefined || app === undefined) return;
+    if (session === undefined ) return;
 
     let cancelled = false;
 
     async function checkPermission() {
-      if (!app || !session) return;
+      if (!session) return;
       try {
-        const permitted = await can(session, `${tableName}.read`, app);
+        const permitted = await can(session, `${tableName}.read`);
         if (cancelled) return;
         if (!permitted) {
           if (onUnauthorized) {
@@ -321,7 +294,7 @@ export function DetailPage<T extends PgTable>({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, app, onUnauthorized]);
+  }, [tableName, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Data fetching via TanStack Query → server function
