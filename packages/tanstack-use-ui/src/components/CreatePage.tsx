@@ -25,6 +25,7 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
@@ -38,7 +39,7 @@ import { getModel } from "@tanstack-use/core/client";
 
 export interface CreatePageProps {
   /** The model whose create layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   /**
    * Called after a successful submission with the server response.
    * Useful for navigation (e.g. redirect to the detail page).
@@ -396,13 +397,13 @@ export function FieldInput<T extends PgTable>({
  * dialog for testing.
  */
 export function CreatePage({
-  tableName,
+  modelKey,
   onSuccess,
   confirmNavigation,
   onUnauthorized,
 }: CreatePageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = getModel(tableName);
+    const model = getModel(modelKey);
     if(!model) {
       return <>not found</>
     }
@@ -455,7 +456,7 @@ export function CreatePage({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, onUnauthorized]);
+  }, [modelKey, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Determine which fields to render — exclude computed field keys (Req 3.2)
@@ -483,7 +484,7 @@ export function CreatePage({
       }
 
       const created = (await create({
-        data: { tableName, record  },
+        data: { modelKey, record  },
       })) as Record<string, unknown>;
 
       onSuccess?.(created);

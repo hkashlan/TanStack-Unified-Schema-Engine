@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./client": "./src/client.ts",
-    "./schema": "./src/schema/schema.ts"
+    "./schema": "./src/schema/schema.ts",
+    "./auth": "./src/auth.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "catalog:",
@@ -17,7 +18,8 @@
     "@tanstack/react-start": "catalog:"
   },
   "scripts": {
-    "test:types": "tsd"
+    "test:types": "tsd",
+    "auth:generate": "pnpm dlx auth generate  --config ./src/auth.ts  --output ./src/schema/auth-schema.ts"
   },
   "tsd": {
     "directory": "src",

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_authenticated/todos/$id")({
     const { id } = Route.useParams();
     return (
       <DetailPage
-        tableName={'todos'}
+        modelKey={'todo'}
         id={id}
       />
     );

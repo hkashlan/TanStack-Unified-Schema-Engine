@@ -44,7 +44,6 @@ export function defineApp<TModels extends Record<string, Model<any, any>>>(
     }
     seen.add(key);
   }
-
   // Mutate the shared singleton so all importers see the updated registry.
   // Cast to any to allow the mutation — at runtime it's the same object.
   // The return type is correctly typed as App<TModels>.

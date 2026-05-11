@@ -30,6 +30,7 @@ import React, { useEffect, useRef, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
@@ -43,7 +44,7 @@ import { getModel } from "@tanstack-use/core/client";
 
 export interface ListPageProps {
   /** The model whose list layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
@@ -152,12 +153,12 @@ interface ListPageCoreProps extends Omit<
 }
 
 function ListPageCore({
-  tableName,
+  modelKey,
   searchParams,
   onNavigate,
 }: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-  const model = getModel(tableName);
+  const model = getModel(modelKey);
   if(!model) {
     return <>not found</>
   }
@@ -252,11 +253,11 @@ function ListPageCore({
     isLoading,
     isError,
   } = useQuery<Record<string, unknown>[]>({
-    queryKey: [tableName, "list", debouncedSearch, sorting, pagination],
+    queryKey: [modelKey, "list", debouncedSearch, sorting, pagination],
     queryFn: () =>
       list({
         data: {
-          tableName,
+          modelKey,
           ...(debouncedSearch ? { search: debouncedSearch } : {}),
           ...(sorting[0]?.id ? { sortBy: sorting[0].id } : {}),
           sortDir: sorting[0]?.desc ? "desc" : "asc",

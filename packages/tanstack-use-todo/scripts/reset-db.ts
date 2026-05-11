@@ -2,7 +2,7 @@
  * Reset script — drops all tables, re-runs migrations, and re-seeds.
  *
  * Run with:
- *   npm run db:reset   (from packages/tanstack-use-todo)
+ *   pnpm db:reset   (from packages/tanstack-use-todo)
  */
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
@@ -16,16 +16,12 @@ if (!DATABASE_URL) {
 
 const db = drizzle({ connection: DATABASE_URL });
 
-// Drop in reverse-dependency order so FK constraints don't block us.
-const tables = [
-  "todos",
-  "user_roles",
-  "roles",
-  "session",
-  "account",
-  "verification",
-  "user",
-];
+// Fetch all user tables in the public schema dynamically.
+const result = await db.execute<{ tablename: string }>(
+  sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
+);
+
+const tables = result.rows.map((r) => r.tablename);
 
 console.log("🗑️  Dropping tables…");
 for (const table of tables) {
@@ -33,14 +29,13 @@ for (const table of tables) {
   console.log(`   dropped: ${table}`);
 }
 
-// Also drop the drizzle migrations tracking table so it re-applies cleanly.
-await db.execute(sql.raw(`DROP TABLE IF EXISTS "__drizzle_migrations" CASCADE`));
-console.log("   dropped: __drizzle_migrations");
+console.log("\n📦  Running generate");
+execSync("pnpm db:generate", { stdio: "inherit" });
 
 console.log("\n📦  Running migrations…");
-execSync("npx drizzle-kit migrate", { stdio: "inherit" });
+execSync("pnpm db:migrate", { stdio: "inherit" });
 
 console.log("\n🌱  Seeding…");
-execSync("npm run seed", { stdio: "inherit" });
+execSync("pnpm run seed", { stdio: "inherit" });
 
 console.log("\n✅  Database reset complete.");

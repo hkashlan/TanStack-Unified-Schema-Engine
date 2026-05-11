@@ -14,7 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { executeCreate, executeUpdate } from "../../tanstack-use-core/src/execute-hooks.js";
-import type { InferRecord, Model } from "../../tanstack-use-core/src/types.js";
+import type { InferRecord, Model, RegisteredApp } from "../../tanstack-use-core/src/types.js";
 import { appServer } from "@tanstack-use/core/server";
 import { authMiddleware } from "../../tanstack-use-core/src/middleware.js";
 import { AuthorizationError, can } from "@tanstack-use/permissions";
@@ -25,7 +25,7 @@ import { getModel } from "@tanstack-use/core/client";
 // ---------------------------------------------------------------------------
 
 export interface ListInput {
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"]
   search?: string;
   sortBy?: string;
   sortDir?: "asc" | "desc";
@@ -34,23 +34,23 @@ export interface ListInput {
 }
 
 export interface GetInput {
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"]
   id: string | number;
 }
 
 export interface CreateInput {
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   record: Record<string, unknown>;
 }
 
 export interface UpdateInput {
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   id: string | number;
   record: Record<string, unknown>;
 }
 
 export interface RemoveInput {
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   id: string | number;
 }
 
@@ -81,9 +81,9 @@ export const list = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<DbRow[]> => {
 
     const db = await appServer.db;
-    const { tableName, page = 0, pageSize = 20 } = data;
-    const model = getModel(tableName);
-    if (!model) throw new Error(`Unknown model: ${tableName}`);
+    const { modelKey, page = 0, pageSize = 20 } = data;
+    const model = getModel(modelKey);
+    if (!model) throw new Error(`Unknown model: ${modelKey}`);
     const rows = await db.select().from(model.table).limit(pageSize).offset(page * pageSize);
     return rows as DbRow[];
   });
@@ -93,25 +93,25 @@ export const get = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ data }): Promise<DbRow> => {
     const db = await appServer.db;
-    const { tableName, id } = data;
-    const model = getModel(tableName);
-    if (!model) throw new Error(`Unknown model: ${tableName}`);
+    const { modelKey, id } = data;
+    const model = getModel(modelKey);
+    if (!model) throw new Error(`Unknown model: ${modelKey}`);
     const pkCol = getPrimaryKeyColumn(model);
     const rows = await db.select().from(model.table).where(eq(pkCol, id));
     const row = rows[0];
-    if (!row) throw new Error(`Record not found: ${tableName}/${id}`);
+    if (!row) throw new Error(`Record not found: ${modelKey}/${id}`);
     return row as DbRow;
   });
 
 export const create = createServerFn({ method: "POST" })
   .inputValidator((d: CreateInput) => d)
   .middleware([authMiddleware])
-  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+  .handler(async ({ data, context: { session, headers } }): Promise<DbRow> => {
     const db = await appServer.db;
-    const { tableName, record } = data;
-    const model = getModel(tableName);
-    if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const permitted = await can(session, `${tableName}.create`);
+    const { modelKey, record } = data;
+    const model = getModel(modelKey);
+    if (!model) throw new Error(`Unknown model: ${modelKey}`);
+    const permitted = await can(modelKey, `${modelKey}:create`, headers);
     if (!permitted) throw new AuthorizationError();
     const result = await executeCreate(
       model,
@@ -125,12 +125,12 @@ export const create = createServerFn({ method: "POST" })
 export const update = createServerFn({ method: "POST" })
   .inputValidator((d: UpdateInput) => d)
   .middleware([authMiddleware])
-  .handler(async ({ data, context: { session } }): Promise<DbRow> => {
+  .handler(async ({ data, context: { session, headers } }): Promise<DbRow> => {
     const db = await appServer.db;
-    const { tableName, record } = data;
-    const model = getModel(tableName);
-    if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const permitted = await can(session, `${tableName}.update`);
+    const { modelKey, record } = data;
+    const model = getModel(modelKey);
+    if (!model) throw new Error(`Unknown model: ${modelKey}`);
+    const permitted = await can(modelKey, `${modelKey}:update`, headers);
     if (!permitted) throw new AuthorizationError();
     const result = await executeUpdate(
       model,
@@ -144,12 +144,13 @@ export const update = createServerFn({ method: "POST" })
 export const remove = createServerFn({ method: "POST" })
   .inputValidator((d: RemoveInput) => d)
   .middleware([authMiddleware])
-  .handler(async ({ data, context: { session } }): Promise<void> => {
+  .handler(async ({ data, context: { session, headers } }): Promise<void> => {
+    console.log(session);
     const db = await appServer.db;
-    const { tableName, id } = data;
-    const model = getModel(tableName);
-    if (!model) throw new Error(`Unknown model: ${tableName}`);
-    const permitted = await can(session, `${tableName}.delete`);
+    const { modelKey, id } = data;
+    const model = getModel(modelKey);
+    if (!model) throw new Error(`Unknown model: ${modelKey}`);
+    const permitted = await can(modelKey, `${modelKey}.delete`, headers);
     if (!permitted) throw new AuthorizationError();
     const pkCol = getPrimaryKeyColumn(model);
     await db.delete(model.table).where(eq(pkCol, id));

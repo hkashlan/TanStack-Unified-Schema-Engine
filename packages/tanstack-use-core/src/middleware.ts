@@ -1,9 +1,19 @@
 import { redirect } from "@tanstack/react-router";
-import { createMiddleware } from "@tanstack/react-start";
-import { appServer } from "./server";
+import { createMiddleware, type RequestMiddlewareWithTypes } from "@tanstack/react-start";
+import { appServer } from "./server.js";
+import type { Session } from "./server.js";
 
-export const authMiddleware = createMiddleware().server(
-  async ({ next, request }) => {
+// TS2742 ("cannot be named without a reference to .pnpm/undici-types/...") is
+// a known issue with inferred types that reference Node.js fetch types via
+// pnpm store paths. Annotating with `RequestMiddlewareWithTypes<any, any, TContext>`
+// gives TypeScript a stable, portable type to emit in declaration files while
+// preserving the specific context shape for consumers.
+// See: https://github.com/microsoft/TypeScript/issues/47663
+
+type AuthMiddlewareContext = { session: Session; headers: Headers };
+
+export const authMiddleware: RequestMiddlewareWithTypes<any, any, AuthMiddlewareContext> =
+  createMiddleware().server(async ({ next, request }) => {
     const session = await appServer.auth.api.getSession({
       headers: request.headers,
     });
@@ -14,8 +24,8 @@ export const authMiddleware = createMiddleware().server(
 
     return await next({
       context: {
-         session,
+        session: session as Session,
+        headers: request.headers,
       },
     });
-  },
-);
+  });

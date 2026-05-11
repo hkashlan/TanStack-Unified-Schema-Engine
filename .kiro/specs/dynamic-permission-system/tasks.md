@@ -26,12 +26,12 @@ Replace the custom `rolesTable` / `userRolesTable` schema and `createPermissions
   - Keep `admin()` and `tanstackStartCookies()` plugins in place
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [-] 4. Update `packages/tanstack-use-core/src/client.ts` to add `organizationClient` with dynamic access control
+- [x] 4. Update `packages/tanstack-use-core/src/client.ts` to add `organizationClient` with dynamic access control
   - Import `organizationClient` from `better-auth/client/plugins`
   - Pass `organizationClient({ dynamicAccessControl: { enabled: true } })` in the `plugins` array of `createAuthClient()`
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 5. Rewrite `packages/tanstack-use-permissions/src/permission-guard.ts` to delegate to `auth.api.hasPermission`
+- [x] 5. Rewrite `packages/tanstack-use-permissions/src/permission-guard.ts` to delegate to `auth.api.hasPermission`
   - Replace the `BetterAuthInstance` import with `AuthInstance` from `@tanstack-use/core/auth`
   - Update the `can()` signature: `auth` parameter type changes from `BetterAuthInstance` to `AuthInstance`
   - Parse `target` on `:` (not `.`): throw `Error("Invalid permission target: ...")` if no `:` is found
@@ -41,22 +41,22 @@ Replace the custom `rolesTable` / `userRolesTable` schema and `createPermissions
   - Extract headers from the session object: `(session as unknown as { headers?: Headers }).headers ?? new Headers()`
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 7.3, 8.2, 8.3_
 
-- [ ] 6. Update `packages/tanstack-use-permissions/src/server.ts` to remove `createPermissionsAdapter` export
+- [x] 6. Update `packages/tanstack-use-permissions/src/server.ts` to remove `createPermissionsAdapter` export
   - Remove the `export { createPermissionsAdapter }` line and the `export type { BetterAuthInstance }` line
   - Keep only `export { createAuthRoute } from "./create-auth-route.js";`
   - _Requirements: 6.3_
 
-- [ ] 7. Update `packages/tanstack-use-permissions/src/index.ts` to clean up exports
+- [x] 7. Update `packages/tanstack-use-permissions/src/index.ts` to clean up exports
   - Remove `export type { BetterAuthInstance } from "./permissions-adapter.js";` — this type is no longer part of the public API
   - Verify `can`, `AuthorizationError`, and `createAuthRoute` remain exported without changes
   - _Requirements: 6.4_
 
-- [ ] 8. Remove `rolesTable` and `userRolesTable` from `packages/tanstack-use-core/src/schema/schema.ts`
+- [x] 8. Remove `rolesTable` and `userRolesTable` from `packages/tanstack-use-core/src/schema/schema.ts`
   - Delete the `rolesTable` and `userRolesTable` table definitions and their imports (`integer`, `serial`, `unique`)
   - Keep `export * from "./auth-schema.js"` and `export { user as usersTable }` intact
   - _Requirements: 6.1, 6.2_
 
-- [ ] 9. Update all call sites in `packages/tanstack-use-ui/src/server.functions.ts` that use the `.` separator
+- [x] 9. Update all call sites in `packages/tanstack-use-ui/src/server.functions.ts` that use the `.` separator
   - Change every `can(session, \`${tableName}.create\`)` → `can(session, \`${tableName}:create\`)`
   - Change every `can(session, \`${tableName}.update\`)` → `can(session, \`${tableName}:update\`)`
   - Change every `can(session, \`${tableName}.delete\`)` → `can(session, \`${tableName}:delete\`)`
@@ -65,16 +65,7 @@ Replace the custom `rolesTable` / `userRolesTable` schema and `createPermissions
   - Remove any import of `createPermissionsAdapter` or `BetterAuthInstance` from call sites in the todo app if present
   - _Requirements: 5.1, 5.6_
 
-- [ ] 10. Generate and apply a Drizzle migration for the `organizationRole` table
-  - From `packages/tanstack-use-todo`, run `pnpm dlx drizzle-kit generate` to produce a new migration file that adds the `organizationRole` table (created by Better Auth's organization plugin with dynamic access control) and drops `roles` and `user_roles`
-  - Review the generated SQL to confirm it adds `organizationRole` and removes `roles` / `user_roles`
-  - Run `pnpm dlx drizzle-kit migrate` to apply the migration against the local database
-  - _Requirements: 6.1, 6.2_
 
-- [ ] 11. Final checkpoint — verify the system compiles and wires together correctly
-  - Run `pnpm typecheck` from the workspace root and fix any type errors
-  - Run `pnpm lint` and fix any Biome lint errors
-  - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
 

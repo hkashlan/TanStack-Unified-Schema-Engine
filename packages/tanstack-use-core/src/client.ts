@@ -1,6 +1,7 @@
 import { createAuthClient } from "better-auth/react";
+import { organizationClient } from "better-auth/client/plugins";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { ComputedFieldDef, Model, RegisteredApp } from "./types.js";
+import type { App, ComputedFieldDef, Model, RegisteredApp } from "./types.js";
 
 /**
  * Client-safe singleton.
@@ -31,14 +32,40 @@ import type { ComputedFieldDef, Model, RegisteredApp } from "./types.js";
  * const { data: session } = appClient.auth.useSession();
  * ```
  */
-export const appClient: RegisteredApp = {
+
+// TS2742: better-auth's plugin types reference internal .mjs paths that
+// TypeScript can't emit in declaration files. We create the client as `any`
+// internally, then cast the export to the inferred type so consumers get
+// full autocomplete while TypeScript has a stable type to emit.
+// See: https://github.com/better-auth/better-auth/issues/4654
+
+const _authClientInstance: any = createAuthClient({
+  plugins: [
+    organizationClient({
+      dynamicAccessControl: { enabled: true },
+    }),
+  ],
+});
+
+// Typed reference used only for `typeof` — never called at runtime.
+declare const _authClientTyped: ReturnType<
+  typeof createAuthClient<{
+    plugins: [ReturnType<typeof organizationClient<{ dynamicAccessControl: { enabled: true } }>>];
+  }>
+>;
+
+export const authClient = _authClientInstance as typeof _authClientTyped;
+
+const _appClient: App = {
   _tag: "App",
   models: {},
-  auth: createAuthClient(),
-} as RegisteredApp;
+  auth: authClient,
+};
 
-export function getModel(tableName: string): Model<PgTable, Record<string, ComputedFieldDef<PgTable>>> | undefined {
-  return tableName in appClient.models ? (appClient.models[tableName as keyof typeof appClient.models] as Model<PgTable, Record<string, ComputedFieldDef<PgTable>>>) : undefined;
+export const appClient = _appClient as RegisteredApp & { auth: typeof authClient };
+
+export function getModel(tableName: keyof RegisteredApp["models"]): Model<PgTable, Record<string, ComputedFieldDef<PgTable>>> | undefined {
+  return tableName in appClient.models ? (appClient.models[tableName] as Model<PgTable, Record<string, ComputedFieldDef<PgTable>>>) : undefined;
 }
 
 

@@ -23,6 +23,7 @@ import React, { useEffect, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
@@ -53,7 +54,7 @@ function isFileField(fieldName: string, model: Model<PgTable>): boolean {
 
 export interface DetailPageProps {
   /** The model whose detail layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   /** The record ID to fetch */
   id: string | number;
   /**
@@ -232,12 +233,12 @@ export function FieldDisplay<T extends PgTable>({
  * Loading and error states are shown while the record is being fetched.
  */
 export function DetailPage({
-  tableName,
+  modelKey,
   id,
   onUnauthorized,
 }: DetailPageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = getModel(tableName);
+    const model = getModel(modelKey);
     if(!model) {
       return <>not found</>
     }
@@ -293,7 +294,7 @@ export function DetailPage({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, onUnauthorized]);
+  }, [modelKey, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Data fetching via TanStack Query → server function
@@ -306,9 +307,9 @@ export function DetailPage({
     isLoading,
     isError,
   } = useQuery<Record<string, unknown>>({
-    queryKey: [tableName, "detail", id],
+    queryKey: [modelKey, "detail", id],
     queryFn: () =>
-      get({ data: { tableName, id } }) as Promise<Record<string, unknown>>,
+      get({ data: { modelKey, id } }) as Promise<Record<string, unknown>>,
   });
 
   // -------------------------------------------------------------------------

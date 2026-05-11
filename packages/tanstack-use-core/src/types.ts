@@ -132,10 +132,13 @@ export interface Model<
   ui: UIConfig<T, TComputed>;
 }
 
-export interface App<TModels extends Record<string, Model<any, any>> = Record<string, Model<any, any>>> {
+export interface App<
+  TModels extends Record<string, Model<any, any>> = Record<string, Model<any, any>>,
+  TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>,
+> {
   _tag: "App";
   models: TModels;
-  auth: ReturnType<typeof createAuthClient>;
+  auth: TAuth;
 }
 
 /**
@@ -171,7 +174,8 @@ export interface Register {
  * When augmented, this becomes the specific app type with known model keys.
  * When not augmented, it's the base `App` with an index signature.
  */
-export type RegisteredApp = Register extends { app: infer TApp extends App }
-  ? TApp
-  : App<Record<string, Model<any, any>>>;
+export type RegisteredApp<TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>> =
+  Register extends { app: infer TApp extends App }
+    ? TApp
+    : App<Record<string, Model<any, any>>, TAuth>;
 
