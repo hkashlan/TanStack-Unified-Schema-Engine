@@ -28,7 +28,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient, getModel } from "@tanstack-use/core/client";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -57,6 +57,12 @@ export interface DetailPageProps {
   modelKey: keyof RegisteredApp["models"];
   /** The record ID to fetch */
   id: string | number;
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Optional override for the redirect function used when permission is denied.
    * When provided, this is called instead of TanStack Router's `navigate`.
@@ -235,6 +241,7 @@ export function FieldDisplay<T extends PgTable>({
 export function DetailPage({
   modelKey,
   id,
+  session,
   onUnauthorized,
 }: DetailPageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
@@ -254,10 +261,8 @@ export function DetailPage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-    const session = appClient.auth.getSession();
-
   const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined  ? true : null,
+    session === undefined ? true : null,
   );
 
   // const routerNavigate = useNavigate();

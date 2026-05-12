@@ -45,7 +45,7 @@ export function getRouter() {
 
   const router = createRouter({
     routeTree: finalTree,
-    context: { queryClient },
+    context: { queryClient, session: null },
   });
 
   return router;

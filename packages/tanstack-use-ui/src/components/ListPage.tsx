@@ -35,7 +35,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { getModel } from "@tanstack-use/core/client";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 
 // ---------------------------------------------------------------------------
@@ -45,6 +45,12 @@ import { getModel } from "@tanstack-use/core/client";
 export interface ListPageProps {
   /** The model whose list layout drives this page */
   modelKey: keyof RegisteredApp["models"];
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.

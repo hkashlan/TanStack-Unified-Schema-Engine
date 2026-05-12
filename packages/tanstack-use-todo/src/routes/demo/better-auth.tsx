@@ -9,6 +9,7 @@ export const Route = createFileRoute("/demo/better-auth")({
 
 function BetterAuthDemo() {
   const { data: session } = appClient.auth.useSession();
+  
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -70,6 +71,7 @@ function BetterAuthDemo() {
       </div>
     );
   }
+  
 
   const handleLogin = async (email: string, password: string) => {
     setError("");
@@ -89,6 +91,8 @@ function BetterAuthDemo() {
           organizationId: orgs.data[0]!.id,
         });
       }
+
+
     } catch {
       setError("An unexpected error occurred");
     } finally {

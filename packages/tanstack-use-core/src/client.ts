@@ -56,6 +56,7 @@ declare const _authClientTyped: ReturnType<
 
 export const authClient = _authClientInstance as typeof _authClientTyped;
 
+
 const _appClient: App = {
   _tag: "App",
   models: {},
@@ -69,3 +70,4 @@ export function getModel(tableName: keyof RegisteredApp["models"]): Model<PgTabl
 }
 
 
+export type SessionClient = typeof authClient.$Infer.Session;

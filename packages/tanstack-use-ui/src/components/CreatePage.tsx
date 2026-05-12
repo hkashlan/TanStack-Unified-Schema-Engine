@@ -30,8 +30,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core";
-import { getModel } from "@tanstack-use/core/client";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +39,12 @@ import { getModel } from "@tanstack-use/core/client";
 export interface CreatePageProps {
   /** The model whose create layout drives this page */
   modelKey: keyof RegisteredApp["models"];
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Called after a successful submission with the server response.
    * Useful for navigation (e.g. redirect to the detail page).
@@ -98,7 +103,7 @@ interface FileFieldInputProps {
   fileAccess: string[];
   /** The FileModelColumn object from model.ui.fileFields — used for upload operations */
   fileModelColumn: { _config: { storage: unknown; fileAccess?: string[] } };
-  session: unknown;
+  session: SessionClient;
   onUpload: (path: string) => void;
 }
 
@@ -262,7 +267,7 @@ interface FieldInputProps {
   fieldName: string;
   model: Model;
   form: AnyFormInstance;
-  session?: unknown;
+  session: SessionClient;
 }
 
 /**
@@ -398,6 +403,7 @@ export function FieldInput<T extends PgTable>({
  */
 export function CreatePage({
   modelKey,
+  session,
   onSuccess,
   confirmNavigation,
   onUnauthorized,
@@ -417,7 +423,6 @@ export function CreatePage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-    const session = appClient.auth.getSession();
   const [authorized, setAuthorized] = useState<boolean | null>(
     session === undefined  ? true : null,
   );
