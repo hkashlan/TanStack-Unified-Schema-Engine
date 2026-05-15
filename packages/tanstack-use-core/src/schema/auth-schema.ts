@@ -1,12 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-  pgTable,
-  text,
-  timestamp,
-  boolean,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -104,9 +97,7 @@ export const organizationRole = pgTable(
     role: text("role").notNull(),
     permission: text("permission").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").$onUpdate(
-      () => /* @__PURE__ */ new Date(),
-    ),
+    updatedAt: timestamp("updated_at").$onUpdate(() => /* @__PURE__ */ new Date()),
   },
   (table) => [
     index("organizationRole_organizationId_idx").on(table.organizationId),
@@ -182,15 +173,12 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   invitations: many(invitation),
 }));
 
-export const organizationRoleRelations = relations(
-  organizationRole,
-  ({ one }) => ({
-    organization: one(organization, {
-      fields: [organizationRole.organizationId],
-      references: [organization.id],
-    }),
+export const organizationRoleRelations = relations(organizationRole, ({ one }) => ({
+  organization: one(organization, {
+    fields: [organizationRole.organizationId],
+    references: [organization.id],
   }),
-);
+}));
 
 export const memberRelations = relations(member, ({ one }) => ({
   organization: one(organization, {

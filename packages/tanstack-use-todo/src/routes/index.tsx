@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  ssr: false,
-  beforeLoad: () => {
-    throw redirect({ to: "/todos" });
-  },
+	ssr: false,
+	beforeLoad: () => {
+		throw redirect({ to: "/todos" });
+	},
 });

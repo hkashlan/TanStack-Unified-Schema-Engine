@@ -31,8 +31,8 @@
  * ```
  */
 
-import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+import { redirect } from "@tanstack/react-router";
 import { appClient, type SessionClient } from "@tanstack-use/core/client";
 
 export interface AuthBeforeLoadOptions {
@@ -128,10 +128,10 @@ export function createAuthBeforeLoad({
     // session in the React Query cache so useSession() reads from cache
     // instead of making a second /api/auth/get-session request.
     let result: SessionClient;
-     const   getSession = async (): Promise<SessionClient> => {
+    const getSession = async (): Promise<SessionClient> => {
       const { data } = await appClient.auth.getSession();
       return data as SessionClient; // Cast to ensure it matches TanStack's expected shape
-    }
+    };
     if (context.queryClient) {
       result = await context.queryClient.ensureQueryData({
         queryKey: sessionQueryKey as unknown[],
@@ -145,7 +145,7 @@ export function createAuthBeforeLoad({
     // Resolve the user from either shape:
     //   better-auth: { data: { user, session } | null, error }
     //   plain:       { user } | null | undefined
-    const user =result?.user;
+    const user = result?.user;
 
     if (!user) {
       throw redirect({

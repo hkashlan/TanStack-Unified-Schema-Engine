@@ -11,21 +11,21 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
+import { getModel } from "@tanstack-use/core/client";
+import { appServer } from "@tanstack-use/core/server";
+import { AuthorizationError, can } from "@tanstack-use/permissions";
 import { eq } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { executeCreate, executeUpdate } from "../../tanstack-use-core/src/execute-hooks.js";
-import type { InferRecord, Model, RegisteredApp } from "../../tanstack-use-core/src/types.js";
-import { appServer } from "@tanstack-use/core/server";
 import { authMiddleware } from "../../tanstack-use-core/src/middleware.js";
-import { AuthorizationError, can } from "@tanstack-use/permissions";
-import { getModel } from "@tanstack-use/core/client";
+import type { InferRecord, Model, RegisteredApp } from "../../tanstack-use-core/src/types.js";
 
 // ---------------------------------------------------------------------------
 // Input / output types
 // ---------------------------------------------------------------------------
 
 export interface ListInput {
-  modelKey: keyof RegisteredApp["models"]
+  modelKey: keyof RegisteredApp["models"];
   search?: string;
   sortBy?: string;
   sortDir?: "asc" | "desc";
@@ -34,7 +34,7 @@ export interface ListInput {
 }
 
 export interface GetInput {
-  modelKey: keyof RegisteredApp["models"]
+  modelKey: keyof RegisteredApp["models"];
   id: string | number;
 }
 
@@ -79,12 +79,15 @@ function getPrimaryKeyColumn(model: Model<PgTable>): PgColumn {
 export const list = createServerFn({ method: "GET" })
   .inputValidator((d: ListInput) => d)
   .handler(async ({ data }): Promise<DbRow[]> => {
-
     const db = await appServer.db;
     const { modelKey, page = 0, pageSize = 20 } = data;
     const model = getModel(modelKey);
     if (!model) throw new Error(`Unknown model: ${modelKey}`);
-    const rows = await db.select().from(model.table).limit(pageSize).offset(page * pageSize);
+    const rows = await db
+      .select()
+      .from(model.table)
+      .limit(pageSize)
+      .offset(page * pageSize);
     return rows as DbRow[];
   });
 
@@ -117,7 +120,7 @@ export const create = createServerFn({ method: "POST" })
       model,
       record as InferRecord<typeof model.table>,
       db,
-        session,
+      session,
     );
     return result as DbRow;
   });

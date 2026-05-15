@@ -1,7 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { InferRecord, Model } from "./types.js";
 import type { Session } from "./server.js";
+import type { InferRecord, Model } from "./types.js";
 
 /**
  * Executes the create lifecycle for a model:

@@ -9,5 +9,5 @@ import type { Model } from "../../tanstack-use-core/src/types.js";
  * any additional wiring. Falls back to the field key name when absent.
  */
 export function resolveLabel<T extends PgTable>(fieldName: string, model: Model<T>): string {
-  return  model.ui.fields?.[fieldName]?.label?.() ?? fieldName;
+  return model.ui.fields?.[fieldName]?.label?.() ?? fieldName;
 }

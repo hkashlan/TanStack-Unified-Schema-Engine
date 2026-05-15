@@ -1,14 +1,6 @@
-import {
-  createRoute,
-  type AnyRoute,
-  type AnyRootRoute,
-} from "@tanstack/react-router";
+import { type AnyRootRoute, type AnyRoute, createRoute } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { App, Model } from "../../tanstack-use-core/src/types.js";
-
-
-
-
 
 // ---------------------------------------------------------------------------
 // Internal intermediate type — used by tests and internal helpers

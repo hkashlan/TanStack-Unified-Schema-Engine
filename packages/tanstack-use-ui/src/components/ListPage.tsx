@@ -14,17 +14,18 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   type ColumnDef,
-  type PaginationState,
-  type SortingState,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type PaginationState,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { getModel, type SessionClient } from "@tanstack-use/core/client";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -36,7 +37,6 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { getModel, type SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types

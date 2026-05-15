@@ -17,10 +17,15 @@
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-table": "catalog:",
     "@tanstack/react-start": "catalog:",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "drizzle-orm": "catalog:",
+    "lucide-react": "^0.545.0",
     "pg": "catalog:",
+    "radix-ui": "^1.4.3",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",

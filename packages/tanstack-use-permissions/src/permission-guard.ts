@@ -16,7 +16,9 @@ export async function can(
 ): Promise<boolean> {
   const colonIndex = target.indexOf(":");
   if (colonIndex === -1) {
-    throw new Error(`Invalid permission target: "${target}". Expected format: "<model>:<operation>"`);
+    throw new Error(
+      `Invalid permission target: "${target}". Expected format: "<model>:<operation>"`,
+    );
   }
 
   const modelName = target.slice(0, colonIndex);
