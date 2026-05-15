@@ -1,12 +1,12 @@
 // tanstack-use-core public API
 // Safe to import on client and server.
 
+export { appClient, getModel } from "./client.js";
 export type { AppConfig } from "./define-app.js";
 export { defineApp } from "./define-app.js";
 export { defineModel } from "./define-model.js";
 export { executeCreate, executeUpdate } from "./execute-hooks.js";
-export { appClient, getModel } from "./client.js";
-export { generatePermissions, buildAc } from "./permission-generator.js";
+export { buildAc, generatePermissions } from "./permission-generator.js";
 
 export type {
   AllFieldKeys,
@@ -19,7 +19,6 @@ export type {
   ListOptions,
   Model,
   PermissionsDef,
-  Register,
   RegisteredApp,
   ServerHooks,
   TabDef,

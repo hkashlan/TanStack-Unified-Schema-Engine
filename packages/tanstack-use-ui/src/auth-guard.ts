@@ -33,7 +33,7 @@
 
 import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { appClient, SessionClient } from "@tanstack-use/core/client";
+import { appClient, type SessionClient } from "@tanstack-use/core/client";
 
 export interface AuthBeforeLoadOptions {
   /**

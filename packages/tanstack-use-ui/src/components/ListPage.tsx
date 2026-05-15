@@ -26,7 +26,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { PgTable } from "drizzle-orm/pg-core";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
@@ -35,8 +36,7 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { getModel, SessionClient } from "@tanstack-use/core/client";
-
+import { getModel, type SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,9 +62,7 @@ export interface ListPageProps {
    * When provided, the component calls this instead of `useNavigate()`.
    * Useful for testing without a full TanStack Router context.
    */
-  onNavigate?: (
-    updater: (prev: Record<string, unknown>) => Record<string, unknown>,
-  ) => void;
+  onNavigate?: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +70,6 @@ export interface ListPageProps {
 // ---------------------------------------------------------------------------
 
 /** Extract the Drizzle table name from the Symbol-keyed property. */
-
 
 // ---------------------------------------------------------------------------
 // Router-aware sub-component
@@ -93,21 +90,13 @@ function RouterAwareListPage(
   const routerSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const routerNavigate = useNavigate();
 
-  function handleNavigate(
-    updater: (prev: Record<string, unknown>) => Record<string, unknown>,
-  ) {
+  function handleNavigate(updater: (prev: Record<string, unknown>) => Record<string, unknown>) {
     void (routerNavigate as (opts: { search: unknown }) => void)({
       search: updater,
     });
   }
 
-  return (
-    <ListPageCore
-      {...props}
-      searchParams={routerSearch}
-      onNavigate={handleNavigate}
-    />
-  );
+  return <ListPageCore {...props} searchParams={routerSearch} onNavigate={handleNavigate} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,9 +115,7 @@ function RouterAwareListPage(
  * Router search params. Pass `searchParams` and `onNavigate` props directly
  * when a router context is unavailable (e.g. in tests).
  */
-export function ListPage(
-  props: ListPageProps,
-): React.ReactElement {
+export function ListPage(props: ListPageProps): React.ReactElement {
   // When explicit overrides are provided (tests, Storybook, etc.) skip the
   // router hooks entirely — no context needed.
   if (props.searchParams !== undefined || props.onNavigate !== undefined) {
@@ -148,14 +135,9 @@ export function ListPage(
 // Core implementation — receives searchParams and onNavigate as plain props
 // ---------------------------------------------------------------------------
 
-interface ListPageCoreProps extends Omit<
-  ListPageProps,
-  "searchParams" | "onNavigate"
-> {
+interface ListPageCoreProps extends Omit<ListPageProps, "searchParams" | "onNavigate"> {
   searchParams: Record<string, unknown>;
-  onNavigate: (
-    updater: (prev: Record<string, unknown>) => Record<string, unknown>,
-  ) => void;
+  onNavigate: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
 }
 
 function ListPageCore({
@@ -165,8 +147,8 @@ function ListPageCore({
 }: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
   const model = getModel(modelKey);
-  if(!model) {
-    return <>not found</>
+  if (!model) {
+    return <>not found</>;
   }
   const listFields = model.ui.layout?.list ?? [];
   const debounceMs = model.ui.layout?.listOptions?.searchDebounceMs ?? 300;
@@ -212,23 +194,19 @@ function ListPageCore({
   // Sort + pagination state derived from URL search params
   // -------------------------------------------------------------------------
 
-  const sortBy = searchParams["sortBy"];
-  const sortDir = searchParams["sortDir"];
+  const sortBy = searchParams.sortBy;
+  const sortDir = searchParams.sortDir;
   const sorting: SortingState =
-    typeof sortBy === "string"
-      ? [{ id: sortBy, desc: sortDir === "desc" }]
-      : [];
+    typeof sortBy === "string" ? [{ id: sortBy, desc: sortDir === "desc" }] : [];
 
-  const rawPage = Number(searchParams["page"] ?? 0);
-  const rawPageSize = Number(searchParams["pageSize"] ?? 20);
+  const rawPage = Number(searchParams.page ?? 0);
+  const rawPageSize = Number(searchParams.pageSize ?? 20);
   const pagination: PaginationState = {
-    pageIndex: isNaN(rawPage) ? 0 : rawPage,
-    pageSize: isNaN(rawPageSize) ? 20 : rawPageSize,
+    pageIndex: Number.isNaN(rawPage) ? 0 : rawPage,
+    pageSize: Number.isNaN(rawPageSize) ? 20 : rawPageSize,
   };
 
-  function setSorting(
-    updater: SortingState | ((prev: SortingState) => SortingState),
-  ) {
+  function setSorting(updater: SortingState | ((prev: SortingState) => SortingState)) {
     const next = typeof updater === "function" ? updater(sorting) : updater;
     const first = next[0];
     onNavigate((prev) => ({
@@ -239,9 +217,7 @@ function ListPageCore({
     }));
   }
 
-  function setPagination(
-    updater: PaginationState | ((prev: PaginationState) => PaginationState),
-  ) {
+  function setPagination(updater: PaginationState | ((prev: PaginationState) => PaginationState)) {
     const next = typeof updater === "function" ? updater(pagination) : updater;
     onNavigate((prev) => ({
       ...prev,
@@ -281,39 +257,32 @@ function ListPageCore({
     string,
     ComputedFieldDef<PgTable>
   >;
-  const uiFields = (model.ui.fields ?? {}) as Record<
-    string,
-    UIFieldDef<PgTable> | undefined
-  >;
+  const uiFields = (model.ui.fields ?? {}) as Record<string, UIFieldDef<PgTable> | undefined>;
 
-  const columns: ColumnDef<Record<string, unknown>>[] = listFields.map(
-    (col: unknown) => {
-      const colKey = col as string;
-      const cf = computedFields[colKey];
-      const uiField = uiFields[colKey];
+  const columns: ColumnDef<Record<string, unknown>>[] = listFields.map((col: unknown) => {
+    const colKey = col as string;
+    const cf = computedFields[colKey];
+    const uiField = uiFields[colKey];
 
-      return {
-        id: colKey,
-        accessorKey: colKey,
-        header: () => resolveLabel(colKey, model as unknown as Model<PgTable>),
-        cell: ({ row }: { row: { original: Record<string, unknown> } }) => {
-          const record = row.original as Record<string, unknown>;
-          if (cf !== undefined) {
-            return cf.format
-              ? cf.format(record as Parameters<typeof cf.format>[0])
-              : String(cf.compute(record as Parameters<typeof cf.compute>[0]));
-          }
-          if (uiField?.format) {
-            return uiField.format(
-              record as Parameters<typeof uiField.format>[0],
-            );
-          }
-          const value = record[colKey];
-          return value !== undefined && value !== null ? String(value) : "";
-        },
-      };
-    },
-  );
+    return {
+      id: colKey,
+      accessorKey: colKey,
+      header: () => resolveLabel(colKey, model as unknown as Model<PgTable>),
+      cell: ({ row }: { row: { original: Record<string, unknown> } }) => {
+        const record = row.original as Record<string, unknown>;
+        if (cf !== undefined) {
+          return cf.format
+            ? cf.format(record as Parameters<typeof cf.format>[0])
+            : String(cf.compute(record as Parameters<typeof cf.compute>[0]));
+        }
+        if (uiField?.format) {
+          return uiField.format(record as Parameters<typeof uiField.format>[0]);
+        }
+        const value = record[colKey];
+        return value !== undefined && value !== null ? String(value) : "";
+      },
+    };
+  });
 
   // -------------------------------------------------------------------------
   // TanStack Table instance
@@ -373,10 +342,7 @@ function ListPageCore({
                 >
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                   {header.column.getIsSorted() === "asc"
                     ? " ↑"
                     : header.column.getIsSorted() === "desc"
@@ -398,9 +364,7 @@ function ListPageCore({
             table.getRowModel().rows.map((row) => (
               <tr key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                 ))}
               </tr>
             ))
@@ -411,6 +375,7 @@ function ListPageCore({
       {/* Pagination controls */}
       <div data-testid="list-pagination">
         <button
+          type="button"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
           aria-label="Previous page"
@@ -419,6 +384,7 @@ function ListPageCore({
         </button>
         <span>Page {pagination.pageIndex + 1}</span>
         <button
+          type="button"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
           aria-label="Next page"

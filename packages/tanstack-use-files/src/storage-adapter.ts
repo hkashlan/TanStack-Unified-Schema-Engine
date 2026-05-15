@@ -1,6 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { randomUUID } from "node:crypto";
 
 /** Core storage contract — store a file, delete by path */
 export interface StorageAdapter {
@@ -14,7 +14,7 @@ export interface StorageAdapter {
  * for packages that are not installed at type-check time.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function dynamicImport(specifier: string): Promise<any> {
+async function _dynamicImport(specifier: string): Promise<unknown> {
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   return new Function("s", "return import(s)")(specifier) as Promise<unknown>;
 }
@@ -48,28 +48,24 @@ export function localDisk(options?: { dir?: string }): StorageAdapter {
  * Uploads to the given bucket and returns the S3 object key.
  * Requires `@aws-sdk/client-s3` to be installed in the consuming project.
  */
-export function s3(options: { bucket: string; region: string }): StorageAdapter {
-  const { bucket, region } = options;
+// export function s3(options: { bucket: string; region: string }): StorageAdapter {
+//   const { bucket, region } = options;
 
-  return {
-    async store(file: File): Promise<string> {
-      const { S3Client, PutObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
-      const client = new S3Client({ region });
-      const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
-      const key = ext ? `${randomUUID()}.${ext}` : randomUUID();
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await client.send(
-        new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer }),
-      );
-      return key;
-    },
+//   return {
+//     async store(file: File): Promise<string> {
+//       const { S3Client, PutObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
+//       const client = new S3Client({ region });
+//       const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
+//       const key = ext ? `${randomUUID()}.${ext}` : randomUUID();
+//       const buffer = Buffer.from(await file.arrayBuffer());
+//       await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer }));
+//       return key;
+//     },
 
-    async delete(path: string): Promise<void> {
-      const { S3Client, DeleteObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
-      const client = new S3Client({ region });
-      await client.send(
-        new DeleteObjectCommand({ Bucket: bucket, Key: path }),
-      );
-    },
-  };
-}
+//     async delete(path: string): Promise<void> {
+//       const { S3Client, DeleteObjectCommand } = await dynamicImport("@aws-sdk/client-s3");
+//       const client = new S3Client({ region });
+//       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: path }));
+//     },
+//   };
+// }

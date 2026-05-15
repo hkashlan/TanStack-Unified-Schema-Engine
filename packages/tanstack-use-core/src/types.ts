@@ -36,7 +36,7 @@ export interface ComputedFieldDef<T extends PgTable> {
  * The function is called on every render, so locale switches are automatically
  * reflected. Falls back to the field key name when absent.
  */
-export interface UIFieldDef<T extends PgTable> {
+export interface UIFieldDef<T extends PgTable = PgTable> {
   label?: () => string;
   format?: (record: InferRecord<T>) => string;
   hidden?: boolean | ((record: InferRecord<T>) => boolean);
@@ -84,10 +84,22 @@ export interface PermissionsDef {
 }
 
 export interface ServerHooks<T extends PgTable> {
-  beforeCreate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined }) => Promise<void>;
-  afterCreate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
-  beforeUpdate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
-  afterUpdate?: (ctx: { record: InferRecord<T>; session?: BetterAuthSession | undefined}) => Promise<void>;
+  beforeCreate?: (ctx: {
+    record: InferRecord<T>;
+    session?: BetterAuthSession | undefined;
+  }) => Promise<void>;
+  afterCreate?: (ctx: {
+    record: InferRecord<T>;
+    session?: BetterAuthSession | undefined;
+  }) => Promise<void>;
+  beforeUpdate?: (ctx: {
+    record: InferRecord<T>;
+    session?: BetterAuthSession | undefined;
+  }) => Promise<void>;
+  afterUpdate?: (ctx: {
+    record: InferRecord<T>;
+    session?: BetterAuthSession | undefined;
+  }) => Promise<void>;
 }
 
 export interface ClientHooks<T extends PgTable> {
@@ -125,15 +137,26 @@ export interface UIConfig<
 
 export interface Model<
   T extends PgTable = PgTable,
-  TComputed extends Record<string, ComputedFieldDef<T>> = Record<string, ComputedFieldDef<T>>,
+  // _TComputed is intentionally unused in the stored `ui` type — see comment
+  // on `ui` below. It's kept so `typeof myModel` still carries the concrete
+  // computed field types for callers that need them.
+  _TComputed extends Record<string, ComputedFieldDef<T>> = Record<string, ComputedFieldDef<T>>,
 > {
   _tag: "Model";
   table: T;
-  ui: UIConfig<T, TComputed>;
+  /**
+   * Stored as the base `UIConfig<PgTable>` so that `Model<ConcreteTable>` is
+   * assignable to `Model<PgTable>` in `defineApp`. TypeScript cannot assign
+   * `Partial<Record<LiteralKeys, V>>` to `Partial<Record<string, V>>` — a
+   * fundamental limitation — so widening `ui` here is the only cast-free fix.
+   * `defineModel` performs a single `as unknown` cast when constructing the
+   * object; all other code sees the correct concrete type via `typeof myModel`.
+   */
+  ui: UIConfig<PgTable, Record<string, ComputedFieldDef<PgTable>>>;
 }
 
 export interface App<
-  TModels extends Record<string, Model<any, any>> = Record<string, Model<any, any>>,
+  TModels extends Record<string, Model> = Record<string, Model>,
   TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>,
 > {
   _tag: "App";
@@ -143,39 +166,36 @@ export interface App<
 
 /**
  * Global type registry for module augmentation.
- * 
+ *
  * Augment this interface in your app to make `appClient` fully type-safe:
- * 
+ *
  * @example
  * ```ts
  * // src/router.tsx or src/lib/app.ts
  * export const app = defineApp({ models: { todo: todoModel, post: postModel } });
- * 
+ *
  * declare module "@tanstack-use/core" {
  *   interface Register {
  *     app: typeof app;
  *   }
  * }
- * 
+ *
  * // Now everywhere in your app:
  * import { appClient } from "@tanstack-use/core";
  * appClient.models.todo  // ✓ autocompletes
  * appClient.models.post  // ✓ autocompletes
  * ```
  */
-export interface Register {
-  // app: App<YourModels>  ← augmented by the consuming app
-}
+// biome-ignore lint/suspicious/noEmptyInterface: augmentation target
+export interface Register {}
 
 /**
  * Resolves the registered app type, falling back to the base untyped App.
  * This is what `appClient` uses for its type.
- * 
+ *
  * When augmented, this becomes the specific app type with known model keys.
  * When not augmented, it's the base `App` with an index signature.
  */
-export type RegisteredApp<TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>> =
-  Register extends { app: infer TApp extends App }
-    ? TApp
-    : App<Record<string, Model<any, any>>, TAuth>;
-
+export type RegisteredApp<
+  TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>,
+> = Register extends { app: infer TApp extends App } ? TApp : App<Record<string, Model>, TAuth>;

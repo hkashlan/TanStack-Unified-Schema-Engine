@@ -17,9 +17,10 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-// import { useNavigate } from "@tanstack/react-router";
+import { getModel, type SessionClient } from "@tanstack-use/core/client";
 import type { PgTable } from "drizzle-orm/pg-core";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
@@ -28,7 +29,6 @@ import type {
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -43,8 +43,7 @@ import { getModel, SessionClient } from "@tanstack-use/core/client";
  * authoritative source for file field detection in the UI layer.
  */
 function isFileField(fieldName: string, model: Model<PgTable>): boolean {
-  const fileFields = (model.ui as { fileFields?: Record<string, unknown> })
-    .fileFields;
+  const fileFields = (model.ui as { fileFields?: Record<string, unknown> }).fileFields;
   return fileFields !== undefined && fieldName in fileFields;
 }
 
@@ -160,14 +159,8 @@ export function FieldDisplay<T extends PgTable>({
 }: FieldDisplayProps<T>): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
 
-  const computedFields = (model.ui.computedFields ?? {}) as Record<
-    string,
-    ComputedFieldDef<T>
-  >;
-  const uiFields = (model.ui.fields ?? {}) as Record<
-    string,
-    UIFieldDef<T> | undefined
-  >;
+  const computedFields = (model.ui.computedFields ?? {}) as Record<string, ComputedFieldDef<T>>;
+  const uiFields = (model.ui.fields ?? {}) as Record<string, UIFieldDef<T> | undefined>;
 
   const cf = computedFields[fieldName];
   const uiField = uiFields[fieldName];
@@ -194,9 +187,7 @@ export function FieldDisplay<T extends PgTable>({
     valueNode = <span data-testid={`field-value-${fieldName}`}>{value}</span>;
   } else if (uiField?.format) {
     // Regular field with a format function — pass the full record
-    const value = uiField.format(
-      record as Parameters<typeof uiField.format>[0],
-    );
+    const value = uiField.format(record as Parameters<typeof uiField.format>[0]);
     valueNode = <span data-testid={`field-value-${fieldName}`}>{value}</span>;
   } else {
     // Raw field value
@@ -206,14 +197,8 @@ export function FieldDisplay<T extends PgTable>({
   }
 
   return (
-    <div
-      data-testid={`field-display-${fieldName}`}
-      style={{ display: "flex", gap: "0.5rem" }}
-    >
-      <span
-        data-testid={`field-label-${fieldName}`}
-        style={{ fontWeight: "bold" }}
-      >
+    <div data-testid={`field-display-${fieldName}`} style={{ display: "flex", gap: "0.5rem" }}>
+      <span data-testid={`field-label-${fieldName}`} style={{ fontWeight: "bold" }}>
         {label}:
       </span>
       {valueNode}
@@ -245,12 +230,12 @@ export function DetailPage({
   onUnauthorized,
 }: DetailPageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = getModel(modelKey);
-    if(!model) {
-      return <>not found</>
-    }
-  
-  const tabs = (model.ui.layout?.detail ?? []);
+  const model = getModel(modelKey);
+  if (!model) {
+    return <>not found</>;
+  }
+
+  const tabs = model.ui.layout?.detail ?? [];
 
   // -------------------------------------------------------------------------
   // Active tab state
@@ -261,14 +246,12 @@ export function DetailPage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-  const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined ? true : null,
-  );
+  const [authorized, setAuthorized] = useState<boolean | null>(session === undefined ? true : null);
 
   // const routerNavigate = useNavigate();
 
   useEffect(() => {
-    if (session === undefined ) return;
+    if (session === undefined) return;
 
     let cancelled = false;
 
@@ -287,7 +270,7 @@ export function DetailPage({
         //   }
         //   setAuthorized(false);
         // } else {
-          setAuthorized(true);
+        setAuthorized(true);
         // }
       } catch {
         if (!cancelled) setAuthorized(false);
@@ -313,8 +296,7 @@ export function DetailPage({
     isError,
   } = useQuery<Record<string, unknown>>({
     queryKey: [modelKey, "detail", id],
-    queryFn: () =>
-      get({ data: { modelKey, id } }) as Promise<Record<string, unknown>>,
+    queryFn: () => get({ data: { modelKey, id } }) as Promise<Record<string, unknown>>,
   });
 
   // -------------------------------------------------------------------------
@@ -360,6 +342,7 @@ export function DetailPage({
         <div data-testid="detail-tabs" role="tablist">
           {tabs.map((tab, index) => (
             <button
+              type="button"
               key={tab.label}
               role="tab"
               aria-selected={index === activeTabIndex}
@@ -377,10 +360,7 @@ export function DetailPage({
 
       {/* Active tab content */}
       {activeTab !== undefined && (
-        <div
-          data-testid={`detail-tab-content-${activeTabIndex}`}
-          role="tabpanel"
-        >
+        <div data-testid={`detail-tab-content-${activeTabIndex}`} role="tabpanel">
           {activeTab.rows.map((row, rowIndex) => (
             <div
               key={rowIndex}

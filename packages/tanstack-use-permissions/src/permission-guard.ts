@@ -1,4 +1,4 @@
-import { getModel, RegisteredApp } from "@tanstack-use/core";
+import { getModel, type RegisteredApp } from "@tanstack-use/core";
 import { appServer } from "@tanstack-use/core/server";
 
 /**

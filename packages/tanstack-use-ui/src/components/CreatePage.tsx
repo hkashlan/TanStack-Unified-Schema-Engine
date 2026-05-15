@@ -18,19 +18,17 @@
  * Memoization note: this file intentionally omits useCallback/useMemo.
  * The React Compiler handles all memoization automatically.
  */
+/** biome-ignore-all lint/suspicious/noExplicitAny: no explain */
 
 import { useForm, type ReactFormExtendedApi } from "@tanstack/react-form";
 // import { useNavigate } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
-import React, { useEffect, useRef, useState } from "react";
-import type {
-  Model,
-  RegisteredApp,
-  UIFieldDef,
-} from "../../../tanstack-use-core/src/types.js";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Model, RegisteredApp, UIFieldDef } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { getModel, SessionClient } from "@tanstack-use/core/client";
+import { getModel, type SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,10 +81,7 @@ function getFileFieldConfig(
 ): { fileAccess?: string[]; storage: unknown } | undefined {
   const fileFields = (
     model.ui as {
-      fileFields?: Record<
-        string,
-        { _config: { fileAccess?: string[]; storage: unknown } }
-      >;
+      fileFields?: Record<string, { _config: { fileAccess?: string[]; storage: unknown } }>;
     }
   ).fileFields;
   if (!fileFields) return undefined;
@@ -131,7 +126,7 @@ export function FileFieldInput({
 
   // Resolve upload access asynchronously
   useEffect(() => {
-    if ( !session) {
+    if (!session) {
       // No app/session — treat as no access (read-only)
       setHasAccess(fileAccess.length === 0);
       return;
@@ -164,14 +159,11 @@ export function FileFieldInput({
     // const files = (e.nativeEvent.target as unknown as HTMLInputElement).files;
     // const file = files?.[0];
     // if (!file || !app) return;
-
     // setUploading(true);
     // setUploadError(null);
-
     // try {
     //   const { handleUpload } =
     //     await import("../../../tanstack-use-files/src/file-handler.js");
-
     //   const path = await handleUpload(
     //     {
     //       session,
@@ -202,14 +194,9 @@ export function FileFieldInput({
   if (!hasAccess) {
     // Read-only display — no upload or delete controls (Requirement 6.7)
     return (
-      <div
-        data-testid={`file-field-readonly-${fieldName}`}
-        aria-label={`${fieldName} (read-only)`}
-      >
+      <div data-testid={`file-field-readonly-${fieldName}`}>
         {currentPath ? (
-          <span data-testid={`file-field-path-${fieldName}`}>
-            {currentPath}
-          </span>
+          <span data-testid={`file-field-path-${fieldName}`}>{currentPath}</span>
         ) : (
           <span data-testid={`file-field-empty-${fieldName}`}>No file</span>
         )}
@@ -235,17 +222,9 @@ export function FileFieldInput({
         onChange={handleFileChange}
         aria-label={`Upload ${fieldName}`}
       />
-      {uploading && (
-        <span data-testid={`file-field-uploading-${fieldName}`}>
-          Uploading…
-        </span>
-      )}
+      {uploading && <span data-testid={`file-field-uploading-${fieldName}`}>Uploading…</span>}
       {uploadError && (
-        <span
-          data-testid={`file-field-error-${fieldName}`}
-          role="alert"
-          style={{ color: "red" }}
-        >
+        <span data-testid={`file-field-error-${fieldName}`} role="alert" style={{ color: "red" }}>
           {uploadError}
         </span>
       )}
@@ -261,7 +240,20 @@ export function FileFieldInput({
 // Uses `any` for all type parameters to accept any form instance regardless
 // of its validator configuration.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyFormInstance = ReactFormExtendedApi<any, any, any, any, any, any, any, any, any, any, any, any>;
+type AnyFormInstance = ReactFormExtendedApi<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
 
 interface FieldInputProps {
   fieldName: string;
@@ -290,17 +282,11 @@ export function FieldInput<T extends PgTable>({
   session,
 }: FieldInputProps): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
-  const uiFields = (model.ui.fields ?? {}) as Record<
-    string,
-    UIFieldDef<T> | undefined
-  >;
+  const uiFields = (model.ui.fields ?? {}) as Record<string, UIFieldDef<T> | undefined>;
   const validate = uiFields[fieldName]?.validate;
 
   // Detect file fields
-  const fileConfig = getFileFieldConfig(
-    fieldName,
-    model as unknown as Model<PgTable>,
-  );
+  const fileConfig = getFileFieldConfig(fieldName, model as unknown as Model<PgTable>);
 
   return (
     <form.Field
@@ -308,10 +294,8 @@ export function FieldInput<T extends PgTable>({
       {...(validate
         ? {
             validators: {
-              onChange: ({ value }: { value: unknown }) =>
-                validate(value) ?? null,
-              onBlur: ({ value }: { value: unknown }) =>
-                validate(value) ?? null,
+              onChange: ({ value }: { value: unknown }) => validate(value) ?? null,
+              onBlur: ({ value }: { value: unknown }) => validate(value) ?? null,
             },
           }
         : {})}
@@ -321,10 +305,7 @@ export function FieldInput<T extends PgTable>({
           data-testid={`field-input-wrapper-${fieldName}`}
           style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
         >
-          <label
-            htmlFor={`field-${fieldName}`}
-            data-testid={`field-label-${fieldName}`}
-          >
+          <label htmlFor={`field-${fieldName}`} data-testid={`field-label-${fieldName}`}>
             {label}
           </label>
 
@@ -345,16 +326,12 @@ export function FieldInput<T extends PgTable>({
               data-testid={`field-input-${fieldName}`}
               value={String(field.state.value ?? "")}
               onChange={(e) =>
-                field.handleChange(
-                  (e.nativeEvent.target as unknown as { value: string }).value,
-                )
+                field.handleChange((e.nativeEvent.target as unknown as { value: string }).value)
               }
               onBlur={field.handleBlur}
               aria-invalid={field.state.meta.errors.length > 0}
               aria-describedby={
-                field.state.meta.errors.length > 0
-                  ? `field-error-${fieldName}`
-                  : undefined
+                field.state.meta.errors.length > 0 ? `field-error-${fieldName}` : undefined
               }
             />
           )}
@@ -409,10 +386,10 @@ export function CreatePage({
   onUnauthorized,
 }: CreatePageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = getModel(modelKey);
-    if(!model) {
-      return <>not found</>
-    }
+  const model = getModel(modelKey);
+  if (!model) {
+    return <>not found</>;
+  }
 
   // -------------------------------------------------------------------------
   // Server functions via prop
@@ -423,19 +400,17 @@ export function CreatePage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-  const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined  ? true : null,
-  );
+  const [authorized, setAuthorized] = useState<boolean | null>(session === undefined ? true : null);
 
   // const routerNavigate = useNavigate();
 
   useEffect(() => {
-    if (session === undefined ) return;
+    if (session === undefined) return;
 
     let cancelled = false;
 
     async function checkPermission() {
-      if ( !session) return;
+      if (!session) return;
       try {
         // const permitted = await can(session, `${tableName}.create`);
         if (cancelled) return;
@@ -449,7 +424,7 @@ export function CreatePage({
         //   }
         //   setAuthorized(false);
         // } else {
-          setAuthorized(true);
+        setAuthorized(true);
         // }
       } catch {
         if (!cancelled) setAuthorized(false);
@@ -489,7 +464,7 @@ export function CreatePage({
       }
 
       const created = (await create({
-        data: { modelKey, record  },
+        data: { modelKey, record },
       })) as Record<string, unknown>;
 
       onSuccess?.(created);
@@ -561,11 +536,7 @@ export function CreatePage({
 
   // Still resolving permission
   if (authorized === null) {
-    return (
-      <div data-testid="create-page-loading-permission">
-        Checking permissions…
-      </div>
-    );
+    return <div data-testid="create-page-loading-permission">Checking permissions…</div>;
   }
 
   // Unauthorized — redirect is in progress; render nothing
@@ -593,9 +564,7 @@ export function CreatePage({
           />
         ))}
 
-        <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-        >
+        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => {
             const isSubmitDisabled = isSubmitting || !canSubmit;
             return (

@@ -211,6 +211,9 @@ importers:
       '@tanstack-use/core':
         specifier: workspace:*
         version: link:../tanstack-use-core
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.100.9(react@19.2.5)
       '@tanstack/react-router':
         specifier: '>=1.168.26'
         version: 1.168.26(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

@@ -9,7 +9,7 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./client": "./src/client.ts",
-    "./schema": "./src/schema/schema.ts",
+    "./schema": "./src/schema/auth-schema.ts",
     "./auth": "./src/auth.ts"
   },
   "dependencies": {

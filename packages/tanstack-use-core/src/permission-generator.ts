@@ -14,7 +14,7 @@ export type CrudAction = (typeof CRUD_ACTIONS)[number];
  * // → { todos: ["create","read","update","delete"], posts: [...] }
  */
 export function generatePermissions(
-  models: Record<string, Model<any, any>>,
+  models: Record<string, Model>,
 ): Record<string, readonly CrudAction[]> {
   const statement: Record<string, readonly CrudAction[]> = {};
   for (const name of Object.keys(models)) {
@@ -27,7 +27,7 @@ export function generatePermissions(
  * Builds a Better Auth AccessControl instance from the model registry.
  * The returned instance is passed as the `ac` option to `organization()`.
  */
-export function buildAc(models: Record<string, Model<any, any>>) {
+export function buildAc(models: Record<string, Model>) {
   const statement = generatePermissions(models);
   return createAccessControl(statement as Parameters<typeof createAccessControl>[0]);
 }

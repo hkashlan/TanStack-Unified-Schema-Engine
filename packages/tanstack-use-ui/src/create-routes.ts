@@ -6,6 +6,10 @@ import {
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { App, Model } from "../../tanstack-use-core/src/types.js";
 
+
+
+
+
 // ---------------------------------------------------------------------------
 // Internal intermediate type — used by tests and internal helpers
 // ---------------------------------------------------------------------------
@@ -38,21 +42,17 @@ export interface RouteDescriptor {
 export function buildRouteDescriptors(app: App): RouteDescriptor[] {
   const descriptors: RouteDescriptor[] = [];
 
-  for (const model of Object.values(app.models)) {
-    const tableName = (model.table as unknown as Record<symbol, unknown>)[
-      Symbol.for("drizzle:Name")
-    ] as string;
-
+  for (const [modelKey, model] of Object.entries(app.models)) {
     if (model.ui.layout?.list !== undefined) {
-      descriptors.push({ path: `/${tableName}`, type: "list", model });
+      descriptors.push({ path: `/${modelKey}`, type: "list", model });
     }
 
     if (model.ui.layout?.detail !== undefined) {
-      descriptors.push({ path: `/${tableName}/$id`, type: "detail", model });
+      descriptors.push({ path: `/${modelKey}/$id`, type: "detail", model });
     }
 
     if (model.ui.layout?.create !== undefined) {
-      descriptors.push({ path: `/${tableName}/new`, type: "create", model });
+      descriptors.push({ path: `/${modelKey}/new`, type: "create", model });
     }
   }
 

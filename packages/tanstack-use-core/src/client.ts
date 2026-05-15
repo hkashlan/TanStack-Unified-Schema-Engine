@@ -1,5 +1,5 @@
-import { createAuthClient } from "better-auth/react";
 import { organizationClient } from "better-auth/client/plugins";
+import { createAuthClient } from "better-auth/react";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { App, ComputedFieldDef, Model, RegisteredApp } from "./types.js";
 
@@ -39,7 +39,7 @@ import type { App, ComputedFieldDef, Model, RegisteredApp } from "./types.js";
 // full autocomplete while TypeScript has a stable type to emit.
 // See: https://github.com/better-auth/better-auth/issues/4654
 
-const _authClientInstance: any = createAuthClient({
+const _authClientInstance = createAuthClient({
   plugins: [
     organizationClient({
       dynamicAccessControl: { enabled: true },
@@ -56,7 +56,6 @@ declare const _authClientTyped: ReturnType<
 
 export const authClient = _authClientInstance as typeof _authClientTyped;
 
-
 const _appClient: App = {
   _tag: "App",
   models: {},
@@ -65,9 +64,12 @@ const _appClient: App = {
 
 export const appClient = _appClient as RegisteredApp & { auth: typeof authClient };
 
-export function getModel(tableName: keyof RegisteredApp["models"]): Model<PgTable, Record<string, ComputedFieldDef<PgTable>>> | undefined {
-  return tableName in appClient.models ? (appClient.models[tableName] as Model<PgTable, Record<string, ComputedFieldDef<PgTable>>>) : undefined;
+export function getModel(
+  tableName: keyof RegisteredApp["models"],
+): Model<PgTable, Record<string, ComputedFieldDef<PgTable>>> | undefined {
+  return tableName in appClient.models
+    ? (appClient.models[tableName] as Model<PgTable, Record<string, ComputedFieldDef<PgTable>>>)
+    : undefined;
 }
-
 
 export type SessionClient = typeof authClient.$Infer.Session;

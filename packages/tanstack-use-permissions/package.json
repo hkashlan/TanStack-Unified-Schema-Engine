@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@tanstack-use/core": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "@tanstack/react-query": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-router": ">=1.168.26"

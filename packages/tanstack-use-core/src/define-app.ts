@@ -1,7 +1,7 @@
-import type { Model, App } from "./types.js";
 import { appClient } from "./client.js";
+import type { App, Model } from "./types.js";
 
-export interface AppConfig<TModels extends Record<string, Model<any, any>>> {
+export interface AppConfig<TModels extends Record<string, Model>> {
   models: TModels;
 }
 
@@ -32,7 +32,7 @@ export interface AppConfig<TModels extends Record<string, Model<any, any>>> {
  *
  * Throws if two models share the same key.
  */
-export function defineApp<TModels extends Record<string, Model<any, any>>>(
+export function defineApp<TModels extends Record<string, Model>>(
   config: AppConfig<TModels>,
 ): App<TModels> {
   // Validate for duplicate keys (keys are already unique in a plain object,
@@ -47,7 +47,7 @@ export function defineApp<TModels extends Record<string, Model<any, any>>>(
   // Mutate the shared singleton so all importers see the updated registry.
   // Cast to any to allow the mutation — at runtime it's the same object.
   // The return type is correctly typed as App<TModels>.
-  (appClient as any).models = config.models;
+  appClient.models = config.models;
 
-  return appClient as any as App<TModels>;
+  return appClient as unknown as App<TModels>;
 }

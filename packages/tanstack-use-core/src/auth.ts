@@ -1,11 +1,11 @@
-import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import * as authSchema from "./schema/auth-schema.js";
-import { buildAc } from "./permission-generator.js";
 import { appClient } from "./client.js";
+import { buildAc } from "./permission-generator.js";
+import * as authSchema from "./schema/auth-schema.js";
 
 // TS2742 ("cannot be named without a reference to .pnpm/zod/...") is a known
 // better-auth + pnpm monorepo issue: the admin() plugin's $Infer metadata
@@ -37,7 +37,6 @@ function buildAuthConfig(db: NodePgDatabase) {
   };
 }
 
-// @ts-ignore TS2742 — see comment above
 export const createAuth = (db: NodePgDatabase) => betterAuth(buildAuthConfig(db));
 
 /**
@@ -47,7 +46,6 @@ export const createAuth = (db: NodePgDatabase) => betterAuth(buildAuthConfig(db)
  *
  * Do NOT use this instance at runtime; use `createAuth(db)` instead.
  */
-// @ts-ignore TS2742 — see comment above
 export const auth = betterAuth({
   ...buildAuthConfig({} as NodePgDatabase),
   database: drizzleAdapter({} as NodePgDatabase, {
@@ -55,6 +53,5 @@ export const auth = betterAuth({
     schema: authSchema,
   }),
 });
-
 
 export type Session = typeof auth.$Infer.Session;

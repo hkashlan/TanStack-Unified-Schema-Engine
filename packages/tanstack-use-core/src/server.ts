@@ -1,7 +1,8 @@
-import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
-import { appClient } from "./client.js";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createAuth } from "./auth.js";
-export * from "./schema/schema.js";
+import { appClient } from "./client.js";
+
+export * from "./schema/auth-schema.js";
 
 /**
  * Server-only singleton.
@@ -28,7 +29,8 @@ export * from "./schema/schema.js";
  * ```
  */
 
-const db = drizzle({ connection: process.env["DATABASE_URL"]! });
+// biome-ignore lint/style/noNonNullAssertion: DATABASE_URL is mandatory
+const db = drizzle({ connection: process.env.DATABASE_URL! });
 const auth = createAuth(db);
 
 interface AppServer {
@@ -43,7 +45,7 @@ export const appServer: AppServer = {
   db,
   /** Returns the Drizzle db instance (kept for API compatibility). */
   auth,
-  hasPermission: auth.api.hasPermission
+  hasPermission: auth.api.hasPermission,
 };
 
 export type Session = typeof appServer.auth.$Infer.Session;
