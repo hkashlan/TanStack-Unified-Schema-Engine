@@ -38,22 +38,7 @@ export { serverFns } from "./server.functions.js";
 export function getBaseRouter(routeTree: AnyRoute, app: App) {
   const queryClient = new QueryClient();
 
-  // Access the route id — TanStack Router sets this as a plain property
-  const routeId = (route: AnyRoute): string =>
-    (route as unknown as { id: string }).id;
-
-  // Find the _authenticated route so model routes are nested inside it
-  const rootChildren = (routeTree.children as unknown as AnyRoute[]) ?? [];
-  const authenticatedRoute = rootChildren.find(
-    (child) => routeId(child) === "/_authenticated",
-  ) ?? null;
-
-  // Generate model routes
-  const modelRoutes = authenticatedRoute
-    ? createRoutes(app, authenticatedRoute)
-    : [];
-
-  // Create the auth route
+  // Create the auth API route
   const authRoute = createAuthRoute(routeTree, {
     handler: async (req: Request) => {
       const auth = await import("@tanstack-use/core/server").then(
@@ -63,27 +48,17 @@ export function getBaseRouter(routeTree: AnyRoute, app: App) {
     },
   });
 
-  // Rebuild root children:
-  // - filter out any stale /api/auth/$ (e.g. from hot-reload)
-  // - replace _authenticated with a version that includes model routes
-  const updatedRootChildren = rootChildren
-    .filter((child) => routeId(child) !== "/api/auth/$")
-    .map((child): AnyRoute => {
-      if (routeId(child) !== "/_authenticated" || modelRoutes.length === 0) {
-        return child;
-      }
-      // Nest model routes inside _authenticated, preserving any existing children
-      const existingAuthChildren =
-        (child.children as unknown as AnyRoute[]) ?? [];
-      return child.addChildren([...existingAuthChildren, ...modelRoutes]);
-    });
-
-  const finalTree = routeTree.addChildren([...updatedRootChildren, authRoute]);
+  // Add only the auth route (don't modify existing file-based routes)
+  // The route tree from routeTree.gen.ts has already been processed
+  // and is finalized. We only add new programmatic routes here.
+  routeTree.addChildren([authRoute]);
 
   const router = createRouter({
-    routeTree: finalTree,
+    routeTree,
     context: { queryClient, session: null },
   });
 
   return router;
 }
+
+
