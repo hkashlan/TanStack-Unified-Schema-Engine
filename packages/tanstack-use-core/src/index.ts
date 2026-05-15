@@ -5,7 +5,8 @@ export type { AppConfig } from "./define-app.js";
 export { defineApp } from "./define-app.js";
 export { defineModel } from "./define-model.js";
 export { executeCreate, executeUpdate } from "./execute-hooks.js";
-export { appClient } from "./client.js";
+export { appClient, getModel } from "./client.js";
+export { generatePermissions, buildAc } from "./permission-generator.js";
 
 export type {
   AllFieldKeys,
@@ -18,6 +19,8 @@ export type {
   ListOptions,
   Model,
   PermissionsDef,
+  Register,
+  RegisteredApp,
   ServerHooks,
   TabDef,
   UIConfig,

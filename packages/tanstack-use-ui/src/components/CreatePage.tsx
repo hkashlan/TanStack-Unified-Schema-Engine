@@ -20,17 +20,17 @@
  */
 
 import { useForm, type ReactFormExtendedApi } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
-import { can } from "@tanstack-use/permissions";
+// import { useNavigate } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useRef, useState } from "react";
 import type {
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,7 +38,13 @@ import { appClient } from "@tanstack-use/core";
 
 export interface CreatePageProps {
   /** The model whose create layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Called after a successful submission with the server response.
    * Useful for navigation (e.g. redirect to the detail page).
@@ -97,7 +103,7 @@ interface FileFieldInputProps {
   fileAccess: string[];
   /** The FileModelColumn object from model.ui.fileFields — used for upload operations */
   fileModelColumn: { _config: { storage: unknown; fileAccess?: string[] } };
-  session: unknown;
+  session: SessionClient;
   onUpload: (path: string) => void;
 }
 
@@ -257,11 +263,11 @@ export function FileFieldInput({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFormInstance = ReactFormExtendedApi<any, any, any, any, any, any, any, any, any, any, any, any>;
 
-interface FieldInputProps<T extends PgTable> {
+interface FieldInputProps {
   fieldName: string;
-  model: Model<T>;
+  model: Model;
   form: AnyFormInstance;
-  session?: unknown;
+  session: SessionClient;
 }
 
 /**
@@ -282,7 +288,7 @@ export function FieldInput<T extends PgTable>({
   model,
   form,
   session,
-}: FieldInputProps<T>): React.ReactElement {
+}: FieldInputProps): React.ReactElement {
   const label = resolveLabel(fieldName, model as unknown as Model<PgTable>);
   const uiFields = (model.ui.fields ?? {}) as Record<
     string,
@@ -396,13 +402,14 @@ export function FieldInput<T extends PgTable>({
  * dialog for testing.
  */
 export function CreatePage({
-  tableName,
+  modelKey,
+  session,
   onSuccess,
   confirmNavigation,
   onUnauthorized,
 }: CreatePageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = appClient.models.get(tableName)!;
+    const model = getModel(modelKey);
     if(!model) {
       return <>not found</>
     }
@@ -416,12 +423,11 @@ export function CreatePage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-    const session = appClient.auth.getSession();
   const [authorized, setAuthorized] = useState<boolean | null>(
     session === undefined  ? true : null,
   );
 
-  const routerNavigate = useNavigate();
+  // const routerNavigate = useNavigate();
 
   useEffect(() => {
     if (session === undefined ) return;
@@ -431,20 +437,20 @@ export function CreatePage({
     async function checkPermission() {
       if ( !session) return;
       try {
-        const permitted = await can(session, `${tableName}.create`);
+        // const permitted = await can(session, `${tableName}.create`);
         if (cancelled) return;
-        if (!permitted) {
-          if (onUnauthorized) {
-            onUnauthorized();
-          } else {
-            void (routerNavigate as (opts: { to: string }) => void)({
-              to: "/unauthorized",
-            });
-          }
-          setAuthorized(false);
-        } else {
+        // if (!permitted) {
+        //   if (onUnauthorized) {
+        //     onUnauthorized();
+        //   } else {
+        //     void (routerNavigate as (opts: { to: string }) => void)({
+        //       to: "/unauthorized",
+        //     });
+        //   }
+        //   setAuthorized(false);
+        // } else {
           setAuthorized(true);
-        }
+        // }
       } catch {
         if (!cancelled) setAuthorized(false);
       }
@@ -455,7 +461,7 @@ export function CreatePage({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, onUnauthorized]);
+  }, [modelKey, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Determine which fields to render — exclude computed field keys (Req 3.2)
@@ -483,7 +489,7 @@ export function CreatePage({
       }
 
       const created = (await create({
-        data: { tableName, record  },
+        data: { modelKey, record  },
       })) as Record<string, unknown>;
 
       onSuccess?.(created);

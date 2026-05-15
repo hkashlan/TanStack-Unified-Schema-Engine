@@ -2,13 +2,22 @@ import { createRouter, type AnyRoute } from "@tanstack/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { routeTree } from "./routeTree.gen";
 import { createAuthRoute } from "@tanstack-use/permissions/server";
-import { defineApp } from "@tanstack-use/core";
+import { appClient, defineApp } from "@tanstack-use/core";
 import { todoModel } from "./lib/model";
 
+// `app` is the typed singleton — `app.models.todo` autocompletes correctly.
+// The module augmentation below makes `appClient.models.todo` work everywhere.
+export const app = defineApp({
+  models: { todo: todoModel },
+});
 
-defineApp({
-  models: [todoModel],
-})
+// Register the app type globally so `appClient` is fully typed everywhere
+declare module "@tanstack-use/core" {
+  interface Register {
+    app: typeof app;
+  }
+}
+appClient
 // `auth` is imported lazily so the `pg` dependency is never statically
 // analysed by Vite when building the client bundle.
 const getAuth = () =>
@@ -36,7 +45,7 @@ export function getRouter() {
 
   const router = createRouter({
     routeTree: finalTree,
-    context: { queryClient },
+    context: { queryClient, session: null },
   });
 
   return router;

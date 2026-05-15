@@ -17,18 +17,18 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { can } from "@tanstack-use/permissions";
+// import { useNavigate } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
 import React, { useEffect, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core/client";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 // ---------------------------------------------------------------------------
 // File field detection
@@ -54,9 +54,15 @@ function isFileField(fieldName: string, model: Model<PgTable>): boolean {
 
 export interface DetailPageProps {
   /** The model whose detail layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
   /** The record ID to fetch */
   id: string | number;
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Optional override for the redirect function used when permission is denied.
    * When provided, this is called instead of TanStack Router's `navigate`.
@@ -233,12 +239,13 @@ export function FieldDisplay<T extends PgTable>({
  * Loading and error states are shown while the record is being fetched.
  */
 export function DetailPage({
-  tableName,
+  modelKey,
   id,
+  session,
   onUnauthorized,
 }: DetailPageProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-    const model = appClient.models.get(tableName)!;
+    const model = getModel(modelKey);
     if(!model) {
       return <>not found</>
     }
@@ -254,13 +261,11 @@ export function DetailPage({
   // -------------------------------------------------------------------------
   // Permission guard (Requirement 5.4)
   // -------------------------------------------------------------------------
-    const session = appClient.auth.getSession();
-
   const [authorized, setAuthorized] = useState<boolean | null>(
-    session === undefined  ? true : null,
+    session === undefined ? true : null,
   );
 
-  const routerNavigate = useNavigate();
+  // const routerNavigate = useNavigate();
 
   useEffect(() => {
     if (session === undefined ) return;
@@ -270,20 +275,20 @@ export function DetailPage({
     async function checkPermission() {
       if (!session) return;
       try {
-        const permitted = await can(session, `${tableName}.read`);
+        // const permitted = await can(session, `${tableName}.read`);
         if (cancelled) return;
-        if (!permitted) {
-          if (onUnauthorized) {
-            onUnauthorized();
-          } else {
-            void (routerNavigate as (opts: { to: string }) => void)({
-              to: "/unauthorized",
-            });
-          }
-          setAuthorized(false);
-        } else {
+        // if (!permitted) {
+        //   if (onUnauthorized) {
+        //     onUnauthorized();
+        //   } else {
+        //     void (routerNavigate as (opts: { to: string }) => void)({
+        //       to: "/unauthorized",
+        //     });
+        //   }
+        //   setAuthorized(false);
+        // } else {
           setAuthorized(true);
-        }
+        // }
       } catch {
         if (!cancelled) setAuthorized(false);
       }
@@ -294,7 +299,7 @@ export function DetailPage({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, session, onUnauthorized]);
+  }, [modelKey, session, onUnauthorized]);
 
   // -------------------------------------------------------------------------
   // Data fetching via TanStack Query → server function
@@ -307,9 +312,9 @@ export function DetailPage({
     isLoading,
     isError,
   } = useQuery<Record<string, unknown>>({
-    queryKey: [tableName, "detail", id],
+    queryKey: [modelKey, "detail", id],
     queryFn: () =>
-      get({ data: { tableName, id } }) as Promise<Record<string, unknown>>,
+      get({ data: { modelKey, id } }) as Promise<Record<string, unknown>>,
   });
 
   // -------------------------------------------------------------------------

@@ -10,6 +10,7 @@
     "typecheck:all": "tsc --noEmit -p packages/tanstack-use-core/tsconfig.json && tsc --noEmit -p packages/tanstack-use-permissions/tsconfig.json && tsc --noEmit -p packages/tanstack-use-files/tsconfig.json && tsc --noEmit -p packages/tanstack-use-ai/tsconfig.json && tsc --noEmit -p packages/tanstack-use-ui/tsconfig.json && tsc --noEmit -p packages/tanstack-use-todo/tsconfig.json",
     "build": "pnpm --filter @tanstack-use/todo build",
     "todo": "pnpm --filter @tanstack-use/todo dev",
+    "db:reset": "pnpm --filter @tanstack-use/todo db:reset",
     "lint": "biome lint ./packages",
     "format": "biome format --write ./packages",
     "check": "biome check --write ./packages"

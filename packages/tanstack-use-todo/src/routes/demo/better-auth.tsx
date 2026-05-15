@@ -9,6 +9,7 @@ export const Route = createFileRoute("/demo/better-auth")({
 
 function BetterAuthDemo() {
   const { data: session } = appClient.auth.useSession();
+  
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -70,6 +71,7 @@ function BetterAuthDemo() {
       </div>
     );
   }
+  
 
   const handleLogin = async (email: string, password: string) => {
     setError("");
@@ -78,7 +80,19 @@ function BetterAuthDemo() {
       const result = await appClient.auth.signIn.email({ email, password });
       if (result.error) {
         setError(result.error.message || "Sign in failed");
+        return;
       }
+
+      // Set the first organization as active so permission checks work.
+      // hasPermission requires an activeOrganizationId on the session.
+      const orgs = await appClient.auth.organization.list();
+      if (!orgs.error && orgs.data && orgs.data.length > 0) {
+        await appClient.auth.organization.setActive({
+          organizationId: orgs.data[0]!.id,
+        });
+      }
+
+
     } catch {
       setError("An unexpected error occurred");
     } finally {

@@ -132,9 +132,50 @@ export interface Model<
   ui: UIConfig<T, TComputed>;
 }
 
-export interface App {
+export interface App<
+  TModels extends Record<string, Model<any, any>> = Record<string, Model<any, any>>,
+  TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>,
+> {
   _tag: "App";
-  models: Map<string, Model<PgTable>>;
-  auth: ReturnType<typeof createAuthClient>;
+  models: TModels;
+  auth: TAuth;
 }
+
+/**
+ * Global type registry for module augmentation.
+ * 
+ * Augment this interface in your app to make `appClient` fully type-safe:
+ * 
+ * @example
+ * ```ts
+ * // src/router.tsx or src/lib/app.ts
+ * export const app = defineApp({ models: { todo: todoModel, post: postModel } });
+ * 
+ * declare module "@tanstack-use/core" {
+ *   interface Register {
+ *     app: typeof app;
+ *   }
+ * }
+ * 
+ * // Now everywhere in your app:
+ * import { appClient } from "@tanstack-use/core";
+ * appClient.models.todo  // ✓ autocompletes
+ * appClient.models.post  // ✓ autocompletes
+ * ```
+ */
+export interface Register {
+  // app: App<YourModels>  ← augmented by the consuming app
+}
+
+/**
+ * Resolves the registered app type, falling back to the base untyped App.
+ * This is what `appClient` uses for its type.
+ * 
+ * When augmented, this becomes the specific app type with known model keys.
+ * When not augmented, it's the base `App` with an index signature.
+ */
+export type RegisteredApp<TAuth extends ReturnType<typeof createAuthClient> = ReturnType<typeof createAuthClient>> =
+  Register extends { app: infer TApp extends App }
+    ? TApp
+    : App<Record<string, Model<any, any>>, TAuth>;
 

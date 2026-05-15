@@ -30,11 +30,12 @@ import React, { useEffect, useRef, useState } from "react";
 import type {
   ComputedFieldDef,
   Model,
+  RegisteredApp,
   UIFieldDef,
 } from "../../../tanstack-use-core/src/types.js";
 import { resolveLabel } from "../label-resolver.js";
 import { serverFns } from "../server.functions.js";
-import { appClient } from "@tanstack-use/core/client";
+import { getModel, SessionClient } from "@tanstack-use/core/client";
 
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,13 @@ import { appClient } from "@tanstack-use/core/client";
 
 export interface ListPageProps {
   /** The model whose list layout drives this page */
-  tableName: string;
+  modelKey: keyof RegisteredApp["models"];
+  /**
+   * The current session, passed down from the route context.
+   * Avoids a redundant `getSession()` API call — the session was already
+   * fetched once in the `_authenticated` layout's `beforeLoad`.
+   */
+  session: SessionClient;
   /**
    * Optional override for the current search params.
    * When provided, the component uses these instead of calling `useSearch()`.
@@ -152,12 +159,12 @@ interface ListPageCoreProps extends Omit<
 }
 
 function ListPageCore({
-  tableName,
+  modelKey,
   searchParams,
   onNavigate,
 }: ListPageCoreProps): React.ReactElement {
   // const tableName = getTableName(model.table);
-  const model = appClient.models.get(tableName)!;
+  const model = getModel(modelKey);
   if(!model) {
     return <>not found</>
   }
@@ -252,11 +259,11 @@ function ListPageCore({
     isLoading,
     isError,
   } = useQuery<Record<string, unknown>[]>({
-    queryKey: [tableName, "list", debouncedSearch, sorting, pagination],
+    queryKey: [modelKey, "list", debouncedSearch, sorting, pagination],
     queryFn: () =>
       list({
         data: {
-          tableName,
+          modelKey,
           ...(debouncedSearch ? { search: debouncedSearch } : {}),
           ...(sorting[0]?.id ? { sortBy: sorting[0].id } : {}),
           sortDir: sorting[0]?.desc ? "desc" : "asc",
@@ -280,7 +287,7 @@ function ListPageCore({
   >;
 
   const columns: ColumnDef<Record<string, unknown>>[] = listFields.map(
-    (col) => {
+    (col: unknown) => {
       const colKey = col as string;
       const cf = computedFields[colKey];
       const uiField = uiFields[colKey];
@@ -289,7 +296,7 @@ function ListPageCore({
         id: colKey,
         accessorKey: colKey,
         header: () => resolveLabel(colKey, model as unknown as Model<PgTable>),
-        cell: ({ row }) => {
+        cell: ({ row }: { row: { original: Record<string, unknown> } }) => {
           const record = row.original as Record<string, unknown>;
           if (cf !== undefined) {
             return cf.format

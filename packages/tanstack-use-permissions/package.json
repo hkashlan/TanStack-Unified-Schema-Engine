@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "scripts": {
-    "auth:generate": "pnpm dlx auth generate  --config ./src/auth.ts  --output ./src/schema/auth-schema.ts"
-  },
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",

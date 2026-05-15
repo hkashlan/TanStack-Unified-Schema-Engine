@@ -38,7 +38,7 @@ export interface RouteDescriptor {
 export function buildRouteDescriptors(app: App): RouteDescriptor[] {
   const descriptors: RouteDescriptor[] = [];
 
-  for (const [, model] of app.models) {
+  for (const model of Object.values(app.models)) {
     const tableName = (model.table as unknown as Record<symbol, unknown>)[
       Symbol.for("drizzle:Name")
     ] as string;

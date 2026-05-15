@@ -1,39 +1,38 @@
-import { appClient } from "@tanstack-use/core";
-import type { BetterAuthInstance } from "./permissions-adapter.js";
-import { Session } from "@tanstack-use/core/server";
+import { getModel, RegisteredApp } from "@tanstack-use/core";
+import { appServer } from "@tanstack-use/core/server";
 
 /**
  * Evaluates whether the session's member can perform an operation on a model.
  *
- * @param session - The Better Auth session
- * @param target  - "ModelName.operation" e.g. "employee.read"
- * @param auth    - The permissions adapter (created via `createPermissionsAdapter`)
- * @param app     - The App registry
+ * @param session - The Better Auth session (with headers attached by TanStack Start middleware)
+ * @param target  - "<modelName>:<operation>" e.g. "todo:delete"
+ * @param auth    - The Better Auth server instance (optional; if absent and permissions are required, returns false)
  * @returns true if the operation is permitted, false otherwise
  */
 export async function can(
-  session: Session,
+  modelKey: keyof RegisteredApp["models"],
   target: string,
-  auth?: BetterAuthInstance,
+  headers: Headers,
 ): Promise<boolean> {
-  const dotIndex = target.indexOf(".");
-  const modelName = dotIndex === -1 ? target : target.slice(0, dotIndex);
-  const operation = dotIndex === -1 ? "" : target.slice(dotIndex + 1);
+  const colonIndex = target.indexOf(":");
+  if (colonIndex === -1) {
+    throw new Error(`Invalid permission target: "${target}". Expected format: "<model>:<operation>"`);
+  }
 
-  const model = appClient.models.get(modelName);
+  const modelName = target.slice(0, colonIndex);
+  const operation = target.slice(colonIndex + 1);
+
+  const model = getModel(modelKey);
   if (model === undefined) {
-    throw new Error(`Unknown model: ${modelName}`);
+    throw new Error(`Unknown model: "${modelName}"`);
   }
 
-  const allowedGroups: string[] =
-    model.ui.permissions?.[operation as keyof typeof model.ui.permissions] ?? [];
+  const result = await appServer.hasPermission({
+    headers,
+    body: {
+      permissions: { [modelName]: [operation] },
+    },
+  });
 
-  // Empty or absent permission array means unrestricted
-  if (allowedGroups.length === 0) {
-    return true;
-  }
-
-  const memberGroups: string[] = await auth?.api?.getActiveMemberGroups(session) ?? [];
-
-  return memberGroups.some((g) => allowedGroups.includes(g));
+  return result.success === true;
 }

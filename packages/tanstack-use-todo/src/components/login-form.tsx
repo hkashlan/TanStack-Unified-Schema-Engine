@@ -36,7 +36,6 @@ export function LoginForm({
       .value;
     onLogin?.(email, password);
   };
-
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
