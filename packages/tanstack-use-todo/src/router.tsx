@@ -1,5 +1,5 @@
 import { defineApp } from "@tanstack-use/core";
-import { getBaseRouter } from "@tanstack-use/permissions/server";
+import { getBaseRouter } from "@tanstack-use/ui/server";
 import { todoModel } from "./lib/model";
 import { routeTree } from "./routeTree.gen";
 

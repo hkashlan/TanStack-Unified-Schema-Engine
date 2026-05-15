@@ -23,8 +23,16 @@ export function AppRoot({ children, loginDescription }: AppRootProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // While the session check is in-flight, render the shell so the router
+  // can mount properly (including the /api/auth route that resolves the check).
   if (isPending) {
-    return null;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+        </div>
+      </QueryClientProvider>
+    );
   }
 
   if (!session?.user) {
