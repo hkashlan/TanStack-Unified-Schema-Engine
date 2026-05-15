@@ -1,3 +1,5 @@
+export { AppRoot } from "./components/AppRoot.js";
+export type { AppRootProps, MyRouterContext } from "./components/AppRoot.js";
 // tanstack-use-ui entry point
 
 export type { AuthBeforeLoadOptions } from "./auth-guard.js";

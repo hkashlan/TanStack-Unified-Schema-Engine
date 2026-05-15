@@ -3,6 +3,11 @@ import { type AnyRoute, createRoute, createRouter } from "@tanstack/react-router
 import type { App } from "@tanstack-use/core";
 import type { SessionClient } from "@tanstack-use/core/client";
 
+type RouterContext = {
+  queryClient: QueryClient;
+  session: SessionClient | null;
+};
+
 export function createAuthRoute(
   rootRoute: AnyRoute,
   auth: { handler: (req: Request) => Response | Promise<Response> },
@@ -20,11 +25,6 @@ export function createAuthRoute(
       },
     },
   } as Parameters<typeof createRoute>[0]) as AnyRoute;
-}
-
-export interface MyRouterContext {
-  queryClient: QueryClient;
-  session: SessionClient | null; // Make it nullable for logged-out states
 }
 
 const getAuth = () => import("@tanstack-use/core/server").then((m) => m.appServer.auth);
@@ -49,7 +49,7 @@ export function getBaseRouter(routeTree: AnyRoute, _app: App) {
 
   const finalTree = routeTree.addChildren([...existingChildren, authRoute]);
 
-  const router = createRouter({
+  const router = createRouter<typeof finalTree, RouterContext>({
     routeTree: finalTree,
     context: { queryClient, session: null },
   });
