@@ -19,6 +19,7 @@ export type {
   ListOptions,
   Model,
   PermissionsDef,
+  Register,
   RegisteredApp,
   ServerHooks,
   TabDef,
