@@ -1,12 +1,6 @@
-import { QueryClient } from "@tanstack/react-query";
-import { type AnyRoute, createRoute, createRouter } from "@tanstack/react-router";
-import type { App } from "@tanstack-use/core";
-import type { SessionClient } from "@tanstack-use/core/client";
+import { type AnyRoute, createRoute } from "@tanstack/react-router";
 
-type RouterContext = {
-  queryClient: QueryClient;
-  session: SessionClient | null;
-};
+
 
 export function createAuthRoute(
   rootRoute: AnyRoute,
@@ -25,34 +19,4 @@ export function createAuthRoute(
       },
     },
   } as Parameters<typeof createRoute>[0]) as AnyRoute;
-}
-
-const getAuth = () => import("@tanstack-use/core/server").then((m) => m.appServer.auth);
-
-export function getBaseRouter(routeTree: AnyRoute, _app: App) {
-  const queryClient = new QueryClient();
-
-  const authRoute = createAuthRoute(routeTree, {
-    handler: async (req: Request) => {
-      const auth = await getAuth();
-      return auth.handler(req);
-    },
-  });
-
-  // Add the programmatic auth API route alongside the existing file-based routes.
-  // We spread the existing children first so they are preserved, then append
-  // the auth route. The filter guards against a duplicate if a file-based
-  // /api/auth/$ route ever gets generated.
-  const existingChildren = ((routeTree.children as unknown as AnyRoute[]) ?? []).filter(
-    (child) => (child as unknown as { id: string }).id !== "/api/auth/$",
-  );
-
-  const finalTree = routeTree.addChildren([...existingChildren, authRoute]);
-
-  const router = createRouter<typeof finalTree, RouterContext>({
-    routeTree: finalTree,
-    context: { queryClient, session: null },
-  });
-
-  return router;
 }

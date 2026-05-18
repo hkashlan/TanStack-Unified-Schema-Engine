@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { appClient } from "@tanstack-use/core/client";
+import { appClient } from "@tanstack-use/core";
 
 export default function BetterAuthHeader() {
 	const { data: session, isPending } = appClient.auth.useSession();

@@ -1,6 +1,6 @@
-import { type AnyRootRoute, type AnyRoute, createRoute } from "@tanstack/react-router";
+import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { App, Model } from "../../tanstack-use-core/src/types.js";
+import type { App, Model } from "@tanstack-use/core";
 
 // ---------------------------------------------------------------------------
 // Internal intermediate type — used by tests and internal helpers
@@ -91,14 +91,17 @@ export function buildRouteDescriptors(app: App): RouteDescriptor[] {
  * `navigate({ to: "/employee/$id", params: { id: "1" } })` are fully
  * type-checked — typos and missing params become compile errors.
  */
-export function createRoutes(app: App, rootRoute: AnyRootRoute): AnyRoute[] {
-  return buildRouteDescriptors(app).map((descriptor) =>
-    createRoute({
-      getParentRoute: () => rootRoute,
+export function createRoutes(app: App, parentRoute: AnyRoute): AnyRoute[] {
+  return buildRouteDescriptors(app).map((descriptor) => {
+    debugger;
+    const route = createRoute({
+      // id: descriptor.path, // route ID is required for dynamic routes with params
+      getParentRoute: () => parentRoute,
       path: descriptor.path,
       // Components are wired in later tasks (ListPage, DetailPage, CreatePage).
       // The route context carries the model so page components can access it.
       context: () => ({ model: descriptor.model, routeType: descriptor.type }),
-    }),
-  );
+    });
+    return route;
+  });
 }

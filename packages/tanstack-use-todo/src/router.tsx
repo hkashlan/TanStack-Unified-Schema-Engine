@@ -1,5 +1,5 @@
-import { defineApp } from "@tanstack-use/core";
-import { getBaseRouter } from "@tanstack-use/permissions/server";
+import {  defineApp } from "@tanstack-use/core";
+import { getBaseRouter } from "@tanstack-use/ui/server";
 import { todoModel } from "./lib/model";
 import { routeTree } from "./routeTree.gen";
 
@@ -8,6 +8,8 @@ import { routeTree } from "./routeTree.gen";
 export const app = defineApp({
 	models: { todo: todoModel },
 });
+
+
 
 // Register the app type globally so `appClient` is fully typed everywhere
 declare module "@tanstack-use/core" {
