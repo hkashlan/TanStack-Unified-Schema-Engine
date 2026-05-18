@@ -9,94 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-
-export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
-  '/about': typeof AboutRoute
-}
-export interface FileRoutesByTo {
-  '/about': typeof AboutRoute
-  '/': typeof AuthenticatedIndexRoute
-}
+export interface FileRoutesByFullPath {}
+export interface FileRoutesByTo {}
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/about': typeof AboutRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths: never
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/'
-  id: '__root__' | '/_authenticated' | '/about' | '/_authenticated/'
+  to: never
+  id: '__root__'
   fileRoutesById: FileRoutesById
 }
-export interface RootRouteChildren {
-  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  AboutRoute: typeof AboutRoute
-}
+export interface RootRouteChildren {}
 
 declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/': {
-      id: '/_authenticated/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-  }
+  interface FileRoutesByPath {}
 }
 
-interface AuthenticatedRouteChildren {
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-}
-
-const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-}
-
-const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
-  AuthenticatedRouteChildren,
-)
-
-const rootRouteChildren: RootRouteChildren = {
-  AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  AboutRoute: AboutRoute,
-}
+const rootRouteChildren: RootRouteChildren = {}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()

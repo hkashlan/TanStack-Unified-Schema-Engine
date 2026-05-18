@@ -1,9 +1,6 @@
 import { type AnyRoute, createRoute } from "@tanstack/react-router";
 
-export interface MyRouterContext {
-  queryClient: unknown; // from @tanstack/react-query
-  session: unknown; // from @tanstack-use/core/client
-}
+
 
 export function createAuthRoute(
   rootRoute: AnyRoute,
